@@ -1,22 +1,36 @@
 # job-warehouse
-Job-warehouse is a MicroService (MS) which stores jobs into a NoSQL database, in order to restore them if necessary.  
+Job-warehouse is a MicroService (MS) which stores pipelines and jobs into a NoSQL database, in order to restore them if necessary.  
 In development...
 
 ## Development requirements
 
 ### Goals
+The job-warehouse MS has to know all the previous and actual existing pipelines (their topology and their tasks). Moreover, is has to store all the previous and actual existing tasks (their "ID card", their working directory and their status). For more informations about pipelines and tasks, see the [Pipelines and tasks](#pipelines-and-tasks) section.
 
-The job-warehouse MS needs to :
-- be adapted to a precise directory organisation (see the [Directory organisation](#directory-organisation) section) ;
-- use the [couchDB][1] database management system ; // nano
-- server / client (ipc)
-- interact with other MS thanks to packets (see the [Packets](#packets) section) ;
+The job-warehouse MS must be composed of two parts :
+- the server, with two main goals :
+  - manage a database management system (see the [Database](#database) section) and be adapted to a precise directory organisation (see the [Directory organisation](#directory-organisation) section) ;
+  - communicate with the client and be able to treat packets (see the [Communication](#communication) section) ;
+- the client : interacs with other MS (see the [Communication](#communication) section) ;
+
+### Pipelines and tasks
+
+A pipeline is :
+- a sequence of tasks, organized in graph ;
+- described by a JSON, this is the **topology** ;
+- saved in a directory named **namespace**, containing one directory per task ;
+
+A task wraps a bioinformatic job in order to manage its pre- and post-processing. The interest is that tasks can be linked up to each other and thereby form a pipeline :
+```
+A ---→ B
+```
+In this pipeline, the results of the task A will be received as input by the task B.
 
 ### Directory organisation
 
 A specific job in a directory cache (`cacheDir`) has 3 levels of directories :
 
-1. the JM directory ;
+1. the JobManager (JM) directory ;
 2. the namespace (directory of a pipeline) ;
 3. the job directory.
 
@@ -43,14 +57,28 @@ Example :
 
 
 
-### Specifications
+### Database
+
+The job-warehouse uses the NoSQL database management system [couchDB][1] (a [guide][4] to begin). In JavaScript, the NPM package used to interact with couchDB is [nano][2].
+
+Two collections :
+- jobs
+- pipelines
 
 
 
-### Packets
+### Communication
+
+The client must be imported by other MS in order to mimic the server API. In fact, the client is an interface to reproduce the server operations.  
+When a MS calls a job-warehouse client function, the client sends the information (in a packet format, see the [Packets](#packets) section) to the server thanks to the NPM package [node-ipc][3]. Then, if the server recognizes the packet, it understands the operation to make.
+
+#### Packets
 
 
 
 
 
 [1]: http://couchdb.apache.org/
+[2]: https://www.npmjs.com/package/nano
+[3]: https://www.npmjs.com/package/node-ipc
+[4]: http://guide.couchdb.org/draft/index.html
