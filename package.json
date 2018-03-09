@@ -1,0 +1,36 @@
+{
+  "name": "ms-warehouse",
+  "version": "1.0.0",
+  "description": "Job-warehouse is a MicroService (MS) which stores pipelines and jobs into a NoSQL database, in order to restore them if necessary.   In development...",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/melaniegarnier/ms-warehouse.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/melaniegarnier/ms-warehouse/issues"
+  },
+  "homepage": "https://github.com/melaniegarnier/ms-warehouse#readme",
+  "devDependencies": {
+    "@types/node": "^9.4.6",
+    "@types/winston": "^2.3.8",
+    "typescript": "^2.7.2"
+  },
+  "dependencies": {
+    "commander": "^2.14.1",
+    "deep-equal": "^1.0.1",
+    "glob": "^7.1.2",
+    "is-uuid": "^1.0.2",
+    "jsonfile": "^4.0.0",
+    "md5": "^2.2.1",
+    "nano": "^6.4.3",
+    "uuid": "^3.2.1",
+    "winston": "^2.4.0"
+  }
+}

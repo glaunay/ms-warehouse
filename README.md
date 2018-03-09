@@ -2,6 +2,17 @@
 Job-warehouse is a MicroService (MS) which stores pipelines and jobs into a NoSQL database, in order to restore them if necessary.  
 In development...
 
+## How to install
+
+First of all, you need to install the Typescript package using the node package manager (npm).
+```
+npm install -g typescript
+```
+
+Once Typescript installed, you should now retrieve the repositery from github using this command:
+```
+```
+
 ## Development requirements
 
 ### Goals
