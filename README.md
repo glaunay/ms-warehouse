@@ -5,12 +5,39 @@ In development...
 ## How to install
 
 First of all, you need to install the Typescript package using the node package manager (npm).
+
 ```
 npm install -g typescript
 ```
 
-Once Typescript installed, you should now retrieve the repositery from github using this command:
+Once Typescript installed, you should now retrieve the repository from github using this command:
+
 ```
+git clone https://github.com/melaniegarnier/ms-warehouse.git
+```
+
+Move into the project directory. Now you need to install all node packages dependencies:
+
+```
+npm install
+```
+
+## Run the program
+
+The first thing you need to do is to compile the ```./ts/``` directory by using the ```tsc``` command in your terminal at the root of this repository ```~/ms-warehouse/```. By using this, you will use the "typescript compiler" and transform all files contained inside the ```./ts/``` repository into javascript files. And now, you will be able to execute with node the program.
+
+To get the help manual from the progam, containing the entire options list, just use the following command:
+
+```javascript
+node index.js -h 
+// or --help
+// you will get:
+Options:
+
+    -c, --config <path>     Load config file
+    -i, --index             Run indexation of cache directories
+    -l, --loglevel <level>  Specified the logger level (debug, info, success, warning, error, critical)
+    -h, --help              output usage information
 ```
 
 ## Development requirements
