@@ -19,6 +19,8 @@ const nanoDB = require("nano");
 const program = require("commander");
 // Required modules
 const dbMod = __importStar(require("./lib/db-module"));
+const server = require("./server");
+const types = __importStar(require("./types/index"));
 const win = require("./lib/logger");
 /*
 * Variable initialisation.
@@ -34,12 +36,14 @@ let emitter = new EventEmitter();
 let nameDB = "warehouse"; // TO DO put in config file?
 let nano = nanoDB('http://vreymond:couch@localhost:5984'); // TO DO put in config file
 let bean = null;
+let port;
 /*
 * Commander package that simplify the usage of commands line.
 */
 program
     .option('-c, --config <path>', 'Load config file')
     .option('-i, --index', 'Run indexation of cache directories')
+    .option('-p, --port <port>', 'Run server on specific port')
     .option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)')
     .parse(process.argv);
 /*
@@ -62,7 +66,7 @@ if (program.config && program.config != "") {
             win.logger.level = upper;
         }
         else {
-            win.logger.log('WARNING', 'No key ' + upper + ' found in logger.levels. Using the default INFO level');
+            win.logger.log('WARNING', `No key ${upper} found in logger.levels. Using the default INFO level`);
         }
     }
     try {
@@ -87,6 +91,8 @@ if (program.index) {
 else {
     win.logger.log('INFO', 'No indexation asked');
 }
+if (program.port && program.port != "")
+    port = program.port;
 if (bean.hasOwnProperty('databaseName'))
     nameDB = bean.databaseName;
 /*
@@ -112,7 +118,47 @@ nano.db.destroy(nameDB, function (err) {
 emitter.on('created', () => {
     if (index)
         indexation(bean.previousCacheDir);
+    // TO DO: Case when port is used
+    server.startServer().on('findByExpress', (data) => {
+        constraintsCall(data, 'express').on('expressSucceed', (docsArray) => {
+            // to complete
+        });
+    })
+        .on('findBySocket', (packet) => {
+        constraintsCall(packet.data(), 'socket').on('socketSucceed', (docsArray) => {
+            packet.data(docsArray);
+            server.push('socketSucceed', packet = packet);
+        });
+    });
 });
+function constraintsCall(data, connectType) {
+    let emitterCall = new EventEmitter();
+    constraintsToQuery(data).on('docsFound', (docsResults) => {
+        console.log('@@@@@@@@@@@@@@@@@@@@@@@');
+        console.log(docsResults);
+        console.log('@@@@@@@@@@@@@@@@@@@@@@@');
+        win.logger.log('INFO', `'Found ${docsResults.docs.length} docs for those constraints`);
+        win.logger.log('DEBUG', `Doc list found \n ${JSON.stringify(docsResults)}`);
+        win.logger.log('DEBUG', `constraints: ${JSON.stringify(constraints)}`);
+        emitterCall.emit(`${connectType}Succeed`, docsResults.docs);
+    })
+        .on('noDocsFound', () => {
+        console.log('@@@@@@@@@@@@@@@@@@@@@@@');
+        console.log('NodocsResults');
+        console.log('@@@@@@@@@@@@@@@@@@@@@@@');
+        win.logger.log('INFO', `No docs founds for constraints`);
+        win.logger.log('DEBUG', `constraints: \n ${JSON.stringify(constraints)}`);
+        emitterCall.emit(`${connectType}NoResults`);
+    })
+        .on('errorOnConstraints', () => {
+        console.log('@@@@@@@@@@@@@@@@@@@@@@@');
+        console.log('ERROR');
+        console.log('@@@@@@@@@@@@@@@@@@@@@@@');
+        win.logger.log('WARNING', `Constraints are empty or not in the right format`);
+        emitterCall.emit(`${connectType}Failed`);
+    });
+    return emitterCall;
+}
 /*
 * Indexation goal is to retrieve the array of caches directory. Find all jobID.json file with their IDs,
 * and add them into couchDB database.
@@ -212,79 +258,86 @@ function addIDtoDoc(path, uuid) {
 /*
 * Function that accept constraints in json format and will transform them into nano query for couchDB.
 * @constraints : json that contain some constraints.
-TO DO: - interface on constraints, (all optionals) : parameter given to the func
-       - Object.keys(constraints).length === 0 instead of case 1
-       - instead of case 2: Array.isArray(constraints)
-* Case 3: undefined, null, empty string, false are evaluated to false
+* @either : optional parameter. If true, change the request to a "or" request. At least one of contrainsts must match (not strict equality)
+* (1) : checking parts. Empty json, array or false value
+* (2) : if either variable is true, adding "$or" key to the query
+* (3) : query builder using a map function. "$and" and "$eq" are implicit here, we dont necessary need those operande to build the query.
+* 	(3.1) : If strict equality (either = false), we want to ckeck if a constraints with a value null exists in the doc. If not, the doc is
+*			not returned.
+*	(3.2) : When a constraints value is equal to an objMap. 2 possibilities:
+*				- If either, then adding a "$in" structure inside the "$or" array
+*				- Else, simply add the "$in" structure inside the "elem" (constraints) key
+*			If elem is not an objMap type, we do the same thing without the "$in" structure
+* (4) : listener on testRequest function. This function accept the query builded with constraintsToQuery.
 */
-function constraintsToQuery(constraints) {
+function constraintsToQuery(constraints, either = false) {
+    let constEmitter = new EventEmitter;
     let query = { "selector": {} };
-    switch (true) {
-        case JSON.stringify(constraints) === JSON.stringify({}):
-            win.logger.log('WARNING', 'Empty constraints json given');
-            constraints = null;
-            break;
-        case JSON.stringify(constraints) === JSON.stringify([]):
-            win.logger.log('WARNING', 'Constraints must be a json object not an array');
-            constraints = null;
-            ;
-            break;
-        case constraints == false:
-            win.logger.log('WARNING', 'Constraints value is evaluated to false, maybe empty object or empty string');
-            constraints = null;
-            break;
-        default:
-            console.log('ok');
-            // "$and" and "$eq" are implicit here, we dont necessary need those operande to build the query.
-            Object.keys(constraints).map(elem => query.selector[elem] = constraints[elem]);
-            /* Query test file inputs property. ===> doesnt work now
-            query = {"selector": {
-                "$and": [
-                {
-                    "script": {
-                        "$eq": "/home/mgarnier/taskObject_devTests/install_from_git/hextask/./data/run_hex.sh"
-                    }
-                },
-                {
-                    "inputs": {
-                        "$and": [{
-                            "file1.inp": {
-                                "$eq" : "c8892c5bbc35bb60ab7cb6eba57b05a8"
-                            }
-                        },
-                        {
-                            "file2.inp": {
-                                "$eq" : "87cb7dce13ea9b3c6885ade04eb242c5"
-                            }
-                        }
-                        ]
-                    }
-                }
-                ]
-            }
+    let strConstr = JSON.stringify(constraints);
+    let sel = query.selector;
+    if (strConstr === JSON.stringify({}) || strConstr === JSON.stringify([])) {
+        win.logger.log('WARNING', 'Empty constraints json or array given');
+        constEmitter.emit('errorOnConstraints');
+        return constEmitter;
+    } // (1)
+    if (!constraints) {
+        win.logger.log('WARNING', 'Constraints value is evaluated to false, maybe empty object or empty string');
+        constEmitter.emit('errorOnConstraints');
+        return constEmitter;
+    } // (1)
+    if (either)
+        sel["$or"] = []; // (2)
+    Object.keys(constraints).map(elem => {
+        if (constraints[elem] === null) {
+            if (!either)
+                sel[elem] = { "$exists": true }; // (3.1)
+            return; // if constraints is null then we jump to the next iteration of the map => will return any value on this key
         }
-        */
-            //console.log(query)
-            break;
-    }
-    return query;
-}
-function testRequest(query) {
-    // just to test if the query work with constraints
-    nano.request({ db: nameDB,
-        method: 'POST',
-        doc: '_find',
-        body: query
-    }, function (err, data) {
-        console.log('------------');
-        console.log(data); //console.log(result)
-        console.log('------------');
+        if (types.isObjMap(constraints[elem])) {
+            either ? sel.$or.push({ [elem]: { "$in": [constraints[elem]] } }) : sel[elem] = { "$in": [constraints[elem]] };
+        }
+        else {
+            either ? sel.$or.push({ [elem]: constraints[elem] }) : sel[elem] = constraints[elem];
+        }
     });
+    win.logger.log('DEBUG', 'query: ' + JSON.stringify(query));
+    dbMod.testRequest(query, nameDB).on('requestDone', (data) => {
+        if (!data.docs.length) {
+            constEmitter.emit('noDocsFound');
+        }
+        else {
+            constEmitter.emit('docsFound', data);
+        }
+    });
+    return constEmitter;
 }
 //constraints tests
 //let constraints: any = {"script": "/home/mgarnier/taskObject_devTests/install_from_git/hextask/./data/run_hex.sh"};
-//let constraints: any = {"script": "/home/mgarnier/taskObject_devTests/install_from_git/hextask/./data/run_hex.sh", "coreScript": "ed28514366b623c47c67802cd0194943"};
-//testRequest(constraintsToQuery(constraints))
+// let constraints: any = {"script": null, "coreScript": "ed28514366b623c47c67802cd0194943","exportVar": {
+//     "hexFlags": " -nocuda -ncpu 16 ",
+//     "hexScript": "/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"
+//   }};
+let constraints = { "script": null, "coreScript": "7b8459fdb1eee409262251c429c48814",
+    "inputs": {
+        "file1.inp": "7726e41aaafd85054aa6c9d4747dec7b"
+    } };
+/*
+// setTimout is temporary. Simulate to socket/express connection request
+setTimeout(function(){
+    constraintsToQuery(constraints).on('docsFound', (docsResults) => {
+    win.logger.log('INFO', 'Found ' + docsResults.length + ' docs for those constraints')
+    win.logger.log('DEBUG', 'Doc list found \n' + JSON.stringify(docsResults))
+    win.logger.log('DEBUG', 'constraints: ' + JSON.stringify(constraints))
+})
+.on('noDocsFound', () => {
+    win.logger.log('INFO', 'No docs founds for constraints')
+    win.logger.log('DEBUG', 'constraints: ' + JSON.stringify(constraints))
+})
+.on('errorOnConstraints', () => {
+    win.logger.log('WARNING', 'Constraints are empty or not in the right format')
+})
+},1000)
+*/
 emitter.on('indexDone', (log) => {
     win.logger.log('INFO', 'Event occured');
 });

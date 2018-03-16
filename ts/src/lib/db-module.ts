@@ -41,3 +41,26 @@ export function addToDB (data: types.jobID | types.jobID[], nameDB: string): Eve
 	return addEmitter;
 }
 
+/*
+* Function that accept a query and request couchDb with nano structure.
+* @query : mango query is required to be accepted by couchDb 
+*/
+export function testRequest(query: types.query, nameDB: string): EventEmitter{
+	let reqEmitter : EventEmitter = new EventEmitter()
+
+	// just to test if the query work with constraints
+	nano.request({db: nameDB,
+			method: 'POST',
+			doc: '_find',
+			body: query
+			
+		}, function(err:any, data:any){
+			if(err){
+				win.logger.log('ERROR', err)
+			}
+			else{
+				reqEmitter.emit('requestDone', data);
+			}			
+		})
+	return reqEmitter;
+}
