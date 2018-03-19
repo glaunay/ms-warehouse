@@ -56,7 +56,7 @@ export function testRequest(query: types.query, nameDB: string): EventEmitter{
 			
 		}, function(err:any, data:any){
 			if(err){
-				win.logger.log('ERROR', err)
+				win.logger.log('requestError', err)
 			}
 			else{
 				reqEmitter.emit('requestDone', data);

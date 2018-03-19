@@ -19,7 +19,7 @@ const nanoDB = require("nano");
 const program = require("commander");
 // Required modules
 const dbMod = __importStar(require("./lib/db-module"));
-const server = require("./server");
+const server = require("./wh-server");
 const types = __importStar(require("./types/index"));
 const win = require("./lib/logger");
 /*
@@ -118,47 +118,53 @@ nano.db.destroy(nameDB, function (err) {
 emitter.on('created', () => {
     if (index)
         indexation(bean.previousCacheDir);
+    console.log("created");
     // TO DO: Case when port is used
-    server.startServer().on('findByExpress', (data) => {
-        constraintsCall(data, 'express').on('expressSucceed', (docsArray) => {
-            // to complete
-        });
-    })
-        .on('findBySocket', (packet) => {
+    //starting express server
+    server.startServerExpress();
+    //starting socket server + listeners
+    server.startServerSocket().on('findBySocket', (packet) => {
         constraintsCall(packet.data(), 'socket').on('socketSucceed', (docsArray) => {
             packet.data(docsArray);
-            server.push('socketSucceed', packet = packet);
+            server.push('find', packet = packet);
+        })
+            .on('socketNoResults', (docsArray) => {
+            packet.data(docsArray);
+            server.push('notFind', packet = packet);
+        })
+            .on('socketFailed', (error) => {
+            packet.data(error);
+            server.push('error', packet = packet);
         });
     });
 });
-function constraintsCall(data, connectType) {
+/*
+* function that manage the call to the constraintsToQuery function. This part is listening on three event
+* returned by the constraintsToQuery event: "docsFound", "noDocsFound" and "errorOnConstraints"
+* @constraints : constraints to check
+* @connectType : specify wich connection type
+*/
+function constraintsCall(constraints, connectType) {
     let emitterCall = new EventEmitter();
-    constraintsToQuery(data).on('docsFound', (docsResults) => {
-        console.log('@@@@@@@@@@@@@@@@@@@@@@@');
-        console.log(docsResults);
-        console.log('@@@@@@@@@@@@@@@@@@@@@@@');
-        win.logger.log('INFO', `'Found ${docsResults.docs.length} docs for those constraints`);
+    // if docs found in couchDB database
+    constraintsToQuery(constraints).on('docsFound', (docsResults) => {
+        win.logger.log('INFO', `Found ${docsResults.docs.length} docs for those constraints from ${connectType} request`);
         win.logger.log('DEBUG', `Doc list found \n ${JSON.stringify(docsResults)}`);
         win.logger.log('DEBUG', `constraints: ${JSON.stringify(constraints)}`);
         emitterCall.emit(`${connectType}Succeed`, docsResults.docs);
     })
-        .on('noDocsFound', () => {
-        console.log('@@@@@@@@@@@@@@@@@@@@@@@');
-        console.log('NodocsResults');
-        console.log('@@@@@@@@@@@@@@@@@@@@@@@');
+        .on('noDocsFound', (docsResults) => {
         win.logger.log('INFO', `No docs founds for constraints`);
         win.logger.log('DEBUG', `constraints: \n ${JSON.stringify(constraints)}`);
-        emitterCall.emit(`${connectType}NoResults`);
+        emitterCall.emit(`${connectType}NoResults`, docsResults.docs);
     })
-        .on('errorOnConstraints', () => {
-        console.log('@@@@@@@@@@@@@@@@@@@@@@@');
-        console.log('ERROR');
-        console.log('@@@@@@@@@@@@@@@@@@@@@@@');
+        .on('errorOnConstraints', (err) => {
         win.logger.log('WARNING', `Constraints are empty or not in the right format`);
-        emitterCall.emit(`${connectType}Failed`);
+        emitterCall.emit(`${connectType}Failed`, err);
     });
     return emitterCall;
 }
+exports.constraintsCall = constraintsCall;
 /*
 * Indexation goal is to retrieve the array of caches directory. Find all jobID.json file with their IDs,
 * and add them into couchDB database.
@@ -276,12 +282,14 @@ function constraintsToQuery(constraints, either = false) {
     let strConstr = JSON.stringify(constraints);
     let sel = query.selector;
     if (strConstr === JSON.stringify({}) || strConstr === JSON.stringify([])) {
-        win.logger.log('WARNING', 'Empty constraints json or array given');
+        let error = 'Empty constraints json or array given';
+        win.logger.log('WARNING', error);
         constEmitter.emit('errorOnConstraints');
         return constEmitter;
     } // (1)
     if (!constraints) {
-        win.logger.log('WARNING', 'Constraints value is evaluated to false, maybe empty object or empty string');
+        let error = 'Constraints value is evaluated to false, maybe empty object or empty string';
+        win.logger.log('WARNING', error);
         constEmitter.emit('errorOnConstraints');
         return constEmitter;
     } // (1)
@@ -303,11 +311,14 @@ function constraintsToQuery(constraints, either = false) {
     win.logger.log('DEBUG', 'query: ' + JSON.stringify(query));
     dbMod.testRequest(query, nameDB).on('requestDone', (data) => {
         if (!data.docs.length) {
-            constEmitter.emit('noDocsFound');
+            constEmitter.emit('noDocsFound', data);
         }
         else {
             constEmitter.emit('docsFound', data);
         }
+    })
+        .on('requestError', (err) => {
+        constEmitter.emit('errorOnConstraints', err);
     });
     return constEmitter;
 }
@@ -317,27 +328,10 @@ function constraintsToQuery(constraints, either = false) {
 //     "hexFlags": " -nocuda -ncpu 16 ",
 //     "hexScript": "/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"
 //   }};
-let constraints = { "script": null, "coreScript": "7b8459fdb1eee409262251c429c48814",
-    "inputs": {
-        "file1.inp": "7726e41aaafd85054aa6c9d4747dec7b"
-    } };
-/*
-// setTimout is temporary. Simulate to socket/express connection request
-setTimeout(function(){
-    constraintsToQuery(constraints).on('docsFound', (docsResults) => {
-    win.logger.log('INFO', 'Found ' + docsResults.length + ' docs for those constraints')
-    win.logger.log('DEBUG', 'Doc list found \n' + JSON.stringify(docsResults))
-    win.logger.log('DEBUG', 'constraints: ' + JSON.stringify(constraints))
-})
-.on('noDocsFound', () => {
-    win.logger.log('INFO', 'No docs founds for constraints')
-    win.logger.log('DEBUG', 'constraints: ' + JSON.stringify(constraints))
-})
-.on('errorOnConstraints', () => {
-    win.logger.log('WARNING', 'Constraints are empty or not in the right format')
-})
-},1000)
-*/
+// let constraints : any = {"script": null, "coreScript": "7b8459fdb1eee409262251c429c48814",
+//   "inputs": {
+//     "file1.inp": "7726e41aaafd85054aa6c9d4747dec7b"
+//   }}
 emitter.on('indexDone', (log) => {
     win.logger.log('INFO', 'Event occured');
 });
