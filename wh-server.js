@@ -43,7 +43,7 @@ class packetManager {
 * #req.body : correspond to the json passed by the url from the client to this server.
 * #res.send : correspond to the response from the server to the request of the client
 */
-exports.startServerExpress = function (port = 3124) {
+exports.startServerExpress = function (port) {
     app.use(parser.json());
     app.use(parser.urlencoded({ extended: true }));
     // route /pushConstraints that request constraints check in couchDB database
@@ -53,18 +53,36 @@ exports.startServerExpress = function (port = 3124) {
             'value': 'express',
             'data': {}
         };
-        win.logger.log('INFO', `Json data receive ${req.body}`);
+        win.logger.log('DEBUG', `Json data receive from '/pushConstraints' \n ${JSON.stringify(req.body)}`);
         // calling constraintsCall func from index.ts with req.body content and express string
         main.constraintsCall(req.body, 'express').on('expressSucceed', (results) => {
-            msgExpress.data = results;
+            // multiple assignation to message properties
+            [msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'find', results];
             res.send(msgExpress);
         })
             .on('expressNoResults', (noResults) => {
-            msgExpress.data = noResults;
+            [msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'notfind', noResults];
             res.send(msgExpress);
         })
             .on('expressfailed', (error) => {
-            msgExpress.data = error;
+            [msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'error', error];
+            res.send(msgExpress);
+        });
+    });
+    // route /storeJob that request adding a complete job in the couchDB database
+    app.post('/storeJob', function (req, res) {
+        let msgExpress = {
+            'type': 'Request',
+            'value': 'express',
+            'data': {}
+        };
+        win.logger.log('DEBUG', `Json data receive from '/storeJob' \n ${JSON.stringify(req.body)}`);
+        main.storeJob(req.body).on('storeDone', () => {
+            [msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', {}];
+            res.send(msgExpress);
+        })
+            .on('storeError', (err) => {
+            [msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', err];
             res.send(msgExpress);
         });
     });
@@ -78,7 +96,7 @@ exports.startServerExpress = function (port = 3124) {
 * @port : socket connection listening on this port, default is 3125.
 * #packet : packetManager object, store socket and data informations.
 */
-exports.startServerSocket = function (port = 3125) {
+exports.startServerSocket = function (port) {
     let emitterSocket = new EventEmitter();
     io.listen(port);
     win.logger.log('INFO', `Running server on port ${port} for Socket connections`);
@@ -86,9 +104,13 @@ exports.startServerSocket = function (port = 3125) {
     io.on('connection', (socket) => {
         let packet = new packetManager(socket);
         win.logger.log('DEBUG', `Client connected on port ${port}`);
-        socket.on('pushConstraints', (msg) => {
-            packet.data(msg.data);
+        socket.on('pushConstraints', (msgConst) => {
+            packet.data(msgConst.data);
             emitterSocket.emit('findBySocket', packet);
+        })
+            .on('storeJob', (msgStore) => {
+            packet.data(msgStore.data);
+            emitterSocket.emit('jobToStore', packet);
         });
     });
     return emitterSocket;
@@ -98,12 +120,14 @@ exports.startServerSocket = function (port = 3125) {
 * @packet : accept the packet as second argument and retriev only the data
 */
 function push(type, packet) {
-    let msg = { 'type': type != null ? 'Results' : 'other',
+    let msg = { 'type': type != null ? 'results' : 'other',
         'value': type,
         'data': packet.data()
     };
-    // emit unique event once the constraints request is done from the couchDB
-    if (type === 'find' || 'notFind' || 'error')
+    // emit unique event once the constraints request is done from the couchDB. returning results to client
+    if (type === 'find' || type === 'notFind' || type === 'errorConstraints')
         packet.socket.emit('resultsConstraints', msg);
+    if (type === 'success' || type === 'errorAddJob')
+        packet.socket.emit('addingResponse', msg);
 }
 exports.push = push;

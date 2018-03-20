@@ -15,6 +15,7 @@ export interface msg {
 // jobID type
 //interface jobID_notNull {
 export interface jobID {
+	cmd?: string,
 	script: string,
 	exportVar: {},
 	modules: string[],

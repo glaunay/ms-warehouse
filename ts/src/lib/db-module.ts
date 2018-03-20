@@ -23,21 +23,20 @@ let nano = nanoDB('http://vreymond:couch@localhost:5984');
 export function addToDB (data: types.jobID | types.jobID[], nameDB: string): EventEmitter {
 	let addEmitter: EventEmitter = new EventEmitter();
 	let db: any = nano.use(nameDB);
-	
 
 	// Test is data is a list
 	let docList: types.jobID[] = Array.isArray(data) ? data : [data];
-	//for (let elem of docList){
-	//	win.logger.log('DEBUG', 'Adding content to warehouse database:' + '\n' + JSON.stringify(elem) + '\n');
+
 		db.bulk({docs: docList}, function(err: any, body: any) {		// nano function insert() to add some data
            	if (err) {
-               	win.logger.log('ERROR', 'Insertion from jobID.json file in database ')
-                return;
+               	win.logger.log('ERROR', 'Insertion from jobID.json file in database')
+               	addEmitter.emit('addError', err);
             }
-        win.logger.log('SUCCESS', 'Insertion of ' + docList.length +  ' jobID.json files in ' + nameDB)
-        addEmitter.emit('addSucceed');
+            else{
+            	win.logger.log('SUCCESS', `Insertion of ${docList.length} jobID.json files in ${nameDB}`)
+            	addEmitter.emit('addSucceed');
+            }
         });
-	//}
 	return addEmitter;
 }
 

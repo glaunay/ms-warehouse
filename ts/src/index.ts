@@ -29,17 +29,20 @@ import win = require('./lib/logger');
 let index: boolean = false;
 let pathConfig: any;
 let emitter: EventEmitter = new EventEmitter();
-let nameDB: string = "warehouse"; // TO DO put in config file?
-let nano = nanoDB('http://vreymond:couch@localhost:5984'); // TO DO put in config file
-let bean: any = null;
-let port: number;
+let nameDB: string = "warehouse"; // default value
+let accountDB: string = "";
+let addressDB: string = "localhost";
+let portExpress: number = 7687;
+let portSocket: number = 7688;
+let portDB: number = 5984; // default port for couchDB
+let configContent: any = null;
+
 /*
 * Commander package that simplify the usage of commands line.
 */
 program
   .option('-c, --config <path>', 'Load config file')
   .option('-i, --index', 'Run indexation of cache directories')
-  .option('-p, --port <port>', 'Run server on specific port')
   .option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)') 
   .parse(process.argv);
 
@@ -69,7 +72,7 @@ if (program.config && program.config != "") { // (1)
 	} 
 
 	try{
-		bean = jsonfile.readFileSync(pathConfig);			// parsing config.file content // add try catch
+		configContent = jsonfile.readFileSync(pathConfig);			// parsing config.file content // add try catch
 	}
 	catch(err){
 		win.logger.log('ERROR', 'while readding and parsing the config file');
@@ -81,7 +84,7 @@ else{
 }
 
 if (program.index) { // (3)
-	if (bean.hasOwnProperty('previousCacheDir')){
+	if (configContent.hasOwnProperty('previousCacheDir')){
 		index = true;
 	}
 	else{
@@ -91,11 +94,16 @@ if (program.index) { // (3)
 else{
 	win.logger.log('INFO', 'No indexation asked');
 }
+//if(program.port && program.port != "") port = program.port;
 
-if(program.port && program.port != "") port = program.port;
+if (configContent.hasOwnProperty('accountDBName')) accountDB = configContent.accountDBName;
+if (configContent.hasOwnProperty('databaseName')) nameDB = configContent.databaseName;
+if (configContent.hasOwnProperty('portCouch')) portDB = configContent.portCouch;
 
-if (bean.hasOwnProperty('databaseName')) nameDB = bean.databaseName;
-		
+//let nano = nanoDB('http://vreymond:couch@localhost:5984');
+export let url: string = `http://${accountDB}:couch@${addressDB}:${portDB}`;
+
+let nano = nanoDB(url)
 
 /*
 * couchDB database creation part. 
@@ -120,14 +128,15 @@ nano.db.destroy(nameDB, function(err: any) {
 
 // Once the database created, and if the index option is specified, we start the indexation.
 emitter.on('created', () => {
-	if (index) indexation(bean.previousCacheDir);
+	if (index) indexation(configContent.previousCacheDir);
 	console.log("created")
 	// TO DO: Case when port is used
 	//starting express server
-	server.startServerExpress();
+	server.startServerExpress(portExpress);
 	//starting socket server + listeners
-	server.startServerSocket().on('findBySocket', (packet: any) => {
-		constraintsCall(packet.data(), 'socket').on('socketSucceed', (docsArray: types.objMap[]) => {
+	server.startServerSocket(portSocket).on('findBySocket', (packet: any) => {
+		constraintsCall(packet.data(), 'socket')
+		.on('socketSucceed', (docsArray: types.objMap[]) => {
 			packet.data(docsArray);
 			server.push('find', packet = packet);
 		})
@@ -137,7 +146,17 @@ emitter.on('created', () => {
 		})
 		.on('socketFailed', (error) => {
 			packet.data(error);
-			server.push('error', packet = packet);
+			server.push('errorConstraints', packet = packet);
+		})
+	})
+	.on('jobToStore', (packet: any) =>{
+		storeJob(packet.data()).on('storeDone', () => {
+			packet.data({});
+			server.push('success', packet = packet);
+		})
+		.on('storeErr', (err) => {
+			packet.data(err);
+			server.push('errorAddJob', packet = packet);
 		})
 	})
 })
@@ -353,19 +372,25 @@ function constraintsToQuery(constraints: types.jobConstr, either: boolean = fals
 	return constEmitter;
 }
 
+/*
+* function storeJob that call addToDb function with a job.
+* @job : job that will store into the couchDB database.
+*/
+export function storeJob(job: types.jobID): EventEmitter {
+	let storeEmitter: EventEmitter = new EventEmitter();
 
-//constraints tests
+	dbMod.addToDB(job, nameDB).on('addSucceed', () => {
+		storeEmitter.emit('storeDone');
+	})
+	.on('addError', (err) => {
+		storeEmitter.emit('storeError', err);
+	})
 
-//let constraints: any = {"script": "/home/mgarnier/taskObject_devTests/install_from_git/hextask/./data/run_hex.sh"};
-// let constraints: any = {"script": null, "coreScript": "ed28514366b623c47c67802cd0194943","exportVar": {
-//     "hexFlags": " -nocuda -ncpu 16 ",
-//     "hexScript": "/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"
-//   }};
-// let constraints : any = {"script": null, "coreScript": "7b8459fdb1eee409262251c429c48814",
-//   "inputs": {
-//     "file1.inp": "7726e41aaafd85054aa6c9d4747dec7b"
-//   }}
+	return storeEmitter;
 
+}
+
+// Remove?
 emitter.on('indexDone', (log) => {
 	win.logger.log('INFO', 'Event occured')
 })
