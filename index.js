@@ -16,6 +16,7 @@ const EventEmitter = require("events");
 const glob = require("glob");
 const jsonfile = require("jsonfile");
 const nanoDB = require("nano");
+//let nanoDB = require('nano')({requestDefaults:{pool:{maxSockets: Infinity}}})
 const program = require("commander");
 // Required modules
 const dbMod = __importStar(require("./lib/db-module"));
@@ -110,15 +111,15 @@ let nano = nanoDB(exports.url);
 */
 nano.db.destroy(nameDB, function (err) {
     if (err && err.statusCode != 404) {
-        win.logger.log('ERROR', 'Destroying ' + nameDB + ' database');
+        win.logger.log('ERROR', `when destroying ${nameDB} database`);
         throw err;
     }
     nano.db.create(nameDB, function (err) {
         if (err) {
-            win.logger.log('ERROR', 'during creation of the database \'' + nameDB + '\' :');
+            win.logger.log('ERROR', `during creation of the database '${nameDB}' : \n`);
             throw err;
         }
-        win.logger.log('SUCCESS', 'Database ' + nameDB + ' created' + '\n');
+        win.logger.log('SUCCESS', `database ${nameDB} created \n`);
         emitter.emit('created'); // emit the event 'created' when done
     });
 });
@@ -126,8 +127,6 @@ nano.db.destroy(nameDB, function (err) {
 emitter.on('created', () => {
     if (index)
         indexation(configContent.previousCacheDir);
-    console.log("created");
-    // TO DO: Case when port is used
     //starting express server
     server.startServerExpress(portExpress);
     //starting socket server + listeners
@@ -204,7 +203,7 @@ function indexation(cacheArray) {
     }
     //let dataToCouch: types.jobID[] = pathResult.filter((elem) => addIDtoDoc(elem, directorySearch(elem)));
     //let dataToCouch: types.jobID[] = dataToFilter.filter(function(n) { return n != undefined; });
-    win.logger.log('DEBUG', 'Number of jobID.json content in list: ' + dataToCouch.length + '\n' + JSON.stringify(dataToCouch) + '\n');
+    win.logger.log('DEBUG', `number of jobID.json content in list ${dataToCouch.length} \n ${JSON.stringify(dataToCouch)}`);
     // TO DO add logger size too big
     dbMod.addToDB(dataToCouch, nameDB).on('addSucceed', () => {
         emitter.emit('indexDone');
@@ -231,11 +230,11 @@ function globCaches(pathsArray) {
     // finding pattern of jobID.json inside cache path
     for (let element in pathsArray) {
         deepIndex.push(glob.sync(pathsArray[element] + "/**/jobID\.json", { follow: true }));
-        win.logger.log('INFO', deepIndex[element].length + ' jobID.json file(s) found in directory ' + pathsArray[element]);
+        win.logger.log('INFO', `${deepIndex[element].length} jobID.json file(s) found in directory ${pathsArray[element]}`);
     }
     // merged array of array into simple array of all path that contain a jobID.json file
     mergedIndex = [].concat.apply([], deepIndex);
-    win.logger.log('DEBUG', 'List of all jobID.json file(s) found: ' + '\n' + JSON.stringify(mergedIndex) + '\n');
+    win.logger.log('DEBUG', `list of all jobID.json file(s) found \n ${JSON.stringify(mergedIndex)} \n`);
     return mergedIndex;
 }
 /*
@@ -249,14 +248,14 @@ function directorySearch(directoryPath) {
     let uuidregexV4 = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/ig;
     let uuidArray = directoryPath.match(uuidregexV4);
     let uuidDir = null;
-    win.logger.log('DEBUG', 'List of all uuid pattern inside a jobID.json path: ' + '\n' + JSON.stringify(uuidArray) + '\n');
+    win.logger.log('DEBUG', `list of all uuid pattern inside a jobID.json path \n ${JSON.stringify(uuidArray)}`);
     if (uuidArray != null) {
         uuidDir = uuidArray.pop(); // retrieving the last element of uuidArray
     }
     else {
-        win.logger.log('WARNING', 'No uuid key found in: ' + directoryPath);
+        win.logger.log('WARNING', `no uuid key found in: ${directoryPath}`);
     }
-    win.logger.log('DEBUG', 'uuid of the directory that contain a jobID.json file ' + uuidDir);
+    win.logger.log('DEBUG', `uuid of the directory that contain a jobID.json file ${uuidDir}`);
     return uuidDir;
 }
 /*
@@ -268,16 +267,18 @@ function directorySearch(directoryPath) {
 function addIDtoDoc(path, uuid) {
     let file;
     //TO DO, some checks???
+    if (typeof (path) !== 'string') {
+        win.logger.log('WARNING', `path given is not a string type : \n ${path}`);
+    }
     try {
         file = jsonfile.readFileSync(path);
     }
     catch (err) {
-        win.logger.log('WARNING', ' while reading the json file ' + path + ' : \n' + err);
+        win.logger.log('WARNING', `while reading the json file ${path} : \n ${err}`);
         return null;
     }
     if (Array.isArray(file))
-        console.log('toto');
-    file["_id"] = uuid;
+        file["_id"] = uuid;
     return file;
 }
 /*
@@ -329,6 +330,7 @@ function constraintsToQuery(constraints, either = false) {
     });
     win.logger.log('DEBUG', 'query: ' + JSON.stringify(query));
     dbMod.testRequest(query, nameDB).on('requestDone', (data) => {
+        //data = JSON.parse(data);
         if (!data.docs.length) {
             constEmitter.emit('noDocsFound', data);
         }

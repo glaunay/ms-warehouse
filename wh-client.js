@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
     Manage the socket connection from another micro-service request
 */
 // Required packages
-//import EventEmitter = require('events');
+const EventEmitter = require("events");
 const io = require("socket.io-client");
 const win = require("./lib/logger");
 let urlSocket = "http://localhost:7688";
@@ -16,7 +16,7 @@ let urlSocket = "http://localhost:7688";
 * #msg : message passed inside the socket connection, using the messageBuilder fonction
 */
 function pushConstraints(constraints) {
-    //let emitterConstraints : EventEmitter = new EventEmitter();
+    let emitterConstraints = new EventEmitter();
     let socket = io.connect(urlSocket);
     //let socketConstraints = io.connect(main.urlSocket);
     let msg = messageBuilder(constraints, 'pushConstraints');
@@ -25,17 +25,18 @@ function pushConstraints(constraints) {
     })
         .on('resultsConstraints', (messageResults) => {
         win.logger.log('INFO', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
-        if (messageResults.type === 'find') {
-            // ??? What is the response????
-        }
-        if (messageResults.type === 'notFind') {
-        }
-        if (messageResults.type === 'error') {
-        }
+        if (messageResults.type === 'find')
+            emitterConstraints.emit('findDocs', messageResults);
+        if (messageResults.type === 'notFind')
+            emitterConstraints.emit('notFindDocs', messageResults);
+        if (messageResults.type === 'errorConstraints')
+            emitterConstraints.emit('errorDocs', messageResults);
     });
+    return emitterConstraints;
 }
 exports.pushConstraints = pushConstraints;
 function storeJob(jobCompleted) {
+    let emitterStore = new EventEmitter();
     let socketStoreJob = io.connect(urlSocket);
     let msg = messageBuilder(jobCompleted, 'storeJob', true);
     socketStoreJob.on('connect', function () {
@@ -43,10 +44,10 @@ function storeJob(jobCompleted) {
     })
         .on('addingResponse', (messageRes) => {
         win.logger.log('INFO', `Message receive from server (add job request) \n ${JSON.stringify(messageRes)}`);
-        if (messageRes.type === 'success') {
-        }
-        if (messageRes.type === 'errorAddjob') {
-        }
+        if (messageRes.type === 'success')
+            emitterStore.emit('addSuccess', messageRes);
+        if (messageRes.type === 'errorAddjob')
+            emitterStore.emit('addError', messageRes);
     });
 }
 exports.storeJob = storeJob;
@@ -56,7 +57,7 @@ exports.storeJob = storeJob;
 * @event : event type
 */
 function messageBuilder(data, event, store = false) {
-    let message = { 'type': store ? 'Store' : 'Request',
+    let message = { 'type': store ? 'Store' : 'request',
         'value': event,
         'data': data
     };

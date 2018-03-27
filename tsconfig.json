@@ -64,8 +64,11 @@
     "./ts/src/wh-client.ts",
     "./ts/src/lib/logger.ts",
     "./ts/src/lib/db-module.ts",
-    "./ts/src/test/test-client.ts",
+    "./ts/src/test/test-socket.ts",
     "./ts/src/test/test-express.ts",
+    "./ts/src/test/test-createExistingJob.ts",
+    "./ts/src/test/test-fastRequestSocket.ts",
+    "./ts/src/test/test-fastRequestExpress.ts",
     "./ts/src/types/index.ts",
   ]
 }

@@ -1,0 +1,16 @@
+{
+	"script":"/home/mgarnier/taskObject_devTests/install_from_git/hextask/./data/run_hex.sh",
+	"exportVar": {
+		"hexFlags":" -nocuda -ncpu 16 ",
+		"hexScript":"/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"
+	},
+	"modules": ["naccess","hex"],
+	"tagTask":"hex",
+	"coreScript" : "828225ffd107c24f545afa0cc3157d4b",
+	"inputs" : {
+		"file1.inp" : "638070a81bb9d85a7a1ecdc94c493df8",
+		"file2.inp" : "6c6a25f99f29b921ef08352bdcd9fe41",
+		"file3.inp" : "2d56974477f9e925e2d0db37a5924644",
+		"file4.inp" : "313b734126fbaf91b59c3a52b5545299"
+	}
+}

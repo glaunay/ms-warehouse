@@ -49,7 +49,7 @@ exports.startServerExpress = function (port) {
     // route /pushConstraints that request constraints check in couchDB database
     app.post('/pushConstraints', function (req, res) {
         let msgExpress = {
-            'type': 'Request',
+            'type': 'request',
             'value': 'express',
             'data': {}
         };
@@ -64,7 +64,7 @@ exports.startServerExpress = function (port) {
             [msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'notfind', noResults];
             res.send(msgExpress);
         })
-            .on('expressfailed', (error) => {
+            .on('expressFailed', (error) => {
             [msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'error', error];
             res.send(msgExpress);
         });
@@ -72,7 +72,7 @@ exports.startServerExpress = function (port) {
     // route /storeJob that request adding a complete job in the couchDB database
     app.post('/storeJob', function (req, res) {
         let msgExpress = {
-            'type': 'Request',
+            'type': 'request',
             'value': 'express',
             'data': {}
         };

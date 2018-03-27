@@ -1,6 +1,7 @@
 /*
 	Express client test.
-	Will be connectec directly to the server by giving some constraints through the url.
+	Trying to request as fast as possible the database to test the sturdiness
+	using express connection.
 */
 
 // Required packages
@@ -45,7 +46,7 @@ let jobID_Test: types.jobID = {
 	"tagTask":"hex",
 	"coreScript" : "e50328c5-dc7f-445d-a5ef-449f4c4b9425",
 	"inputs" : {
-		"file1.inp" : "5e2599cd-a22d-4c79-b5cb-4a6fd6291349"
+		"file1.inp" : "5e2599cd-a22d-4c79-b5cb-4a6fd6291349",
 	}
 }
 
@@ -80,5 +81,10 @@ function onJobComp(data: any) {
 }
 
 
-createJobByExpress(constraints);
-onJobComp(jobID_Test);
+setInterval(function(){
+	createJobByExpress(constraints);
+},500)
+
+setInterval(function(){
+	onJobComp(jobID_Test);
+},500)

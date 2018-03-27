@@ -1,16 +1,17 @@
 /*
-	Express client test.
-	Will be connectec directly to the server by giving some constraints through the url.
+	Socket client test.
+	Trying to request as fast as possible the database to test the sturdiness
+	using socket connection.
+	With a setInterval of 200ms, the microservice is stable. On the other hand, 
+	with 100 ms, the microservice will crash several seconds after starting.
 */
 
 // Required packages
 import program = require('commander');
-import request = require('request');
 // Required modules
+import client = require('../wh-client')
 import * as types from '../types/index';
 import win = require('../lib/logger');
-
-let urlExpress: string = "http://localhost:7687";
 
 // Commander package part
 program
@@ -32,53 +33,43 @@ let constraints: types.jobConstr = {
 	"script": null, "coreScript": "7b8459fdb1eee409262251c429c48814",
 	"inputs": {
 		"file1.inp": "7726e41aaafd85054aa6c9d4747dec7b"
-	},
-}
-
-let jobID_Test: types.jobID = {
-	"script":"/Users/vreymond/Stage/Projet/ms-warehouse/run_hex.sh",
-	"exportVar": {
-		"hexFlags":" -nocuda -ncpu 16 ",
-		"hexScript":"/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"
-	},
-	"modules": ["naccess","hex"],
-	"tagTask":"hex",
-	"coreScript" : "e50328c5-dc7f-445d-a5ef-449f4c4b9425",
-	"inputs" : {
-		"file1.inp" : "5e2599cd-a22d-4c79-b5cb-4a6fd6291349"
 	}
 }
+
+let jobID_Test: types.jobID = { "script": "/Users/vreymond/Stage/Projet/ms-warehouse/run_hex.sh",
+    "exportVar":
+     { "hexFlags": " -nocuda -ncpu 16 ",
+       "hexScript": "/software/mobi/hex/8.1.1/exe/hex8.1.1.x64" },
+    "modules": [ "naccess", "hex"],
+    "tagTask": "hex",
+    "coreScript": "61d743a3-6371-4830-b1ca-15db6fbbb02c",
+   "inputs":
+     { "file1.inp": "aaf4d3b5-e5a3-44a3-8bc5-bde61fad671a",
+       "file2.inp": "b01ba442-be19-4c45-b6a6-345e0ffb6230" }}
+
 
 /*
 * function createJobByExpress that will check if job already exist inside the coiuchDB database before creating it.
 * @constraints : constraints we want to check
 */
-function createJobByExpress(constraints: types.jobConstr){
-	request({
-		url: `${urlExpress}/pushConstraints`,
-		method: 'POST',
-		body: constraints,
-		json: true
-	}, function(error: any, response:any, body:any){
-		win.logger.log('INFO', `Message receive from server \n ${JSON.stringify(body)}`)
-	});
+function createJobBySocket(constraints: types.jobConstr){
+	client.pushConstraints(constraints);
 }
 
 /*
 * function onJobComp that simulate a completed job that we want to store into the couchDB database
 * @data : data to store
+* NOT IMPLEMENTED YET
 */
 function onJobComp(data: any) {
-	request({
-		url: `${urlExpress}/storeJob`,
-		method: 'POST',
-		body: jobID_Test,
-		json: true
-	}, function(error: any, response:any, body:any){
-		win.logger.log('INFO', `Message receive from server \n ${JSON.stringify(body)}`)
-	});
+	client.storeJob(jobID_Test);
 }
 
+setInterval(function(){
+	createJobBySocket(constraints);
+},1000)
 
-createJobByExpress(constraints);
-onJobComp(jobID_Test);
+setInterval(function(){
+	onJobComp(jobID_Test);
+},1000)
+

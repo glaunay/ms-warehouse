@@ -1,5 +1,5 @@
 {
-	"previousCacheDir" : ["/Users/vreymond/Stage/Projet/cache", "/Users/vreymond/Desktop/cache", "/Users/vreymond/Test/cache/"],
+	"previousCacheDir" : ["./test/cache_Dir_1", "./test/cache_Dir_2", "./test/cache_Dir_3"],
 	"accountDBName": "vreymond",
 	"databaseName" : "warehouse",
 	"portCouch" : 5984

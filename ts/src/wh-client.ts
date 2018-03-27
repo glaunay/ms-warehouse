@@ -3,7 +3,7 @@
 	Manage the socket connection from another micro-service request
 */
 // Required packages
-//import EventEmitter = require('events');
+import EventEmitter = require('events');
 import io = require('socket.io-client');
 // Required modules
 import * as types from './types/index';
@@ -17,8 +17,8 @@ let urlSocket: string = "http://localhost:7688";
 * #socket : socket client connection on adress.
 * #msg : message passed inside the socket connection, using the messageBuilder fonction
 */
-export function pushConstraints(constraints: types.jobConstr){
-	//let emitterConstraints : EventEmitter = new EventEmitter();
+export function pushConstraints(constraints: types.jobConstr) : EventEmitter {
+	let emitterConstraints : EventEmitter = new EventEmitter();
 	let socket = io.connect(urlSocket);
 	//let socketConstraints = io.connect(main.urlSocket);
 	let msg = messageBuilder(constraints, 'pushConstraints');
@@ -28,20 +28,16 @@ export function pushConstraints(constraints: types.jobConstr){
 	})
 	.on('resultsConstraints', (messageResults: types.msg) => {
 		win.logger.log('INFO', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
-		if (messageResults.type === 'find'){
-			// ??? What is the response????
-		}
-		if (messageResults.type === 'notFind'){
 
-		}
-		if (messageResults.type === 'error'){
-
-		}
+		if (messageResults.type === 'find') emitterConstraints.emit('findDocs', messageResults);
+		if (messageResults.type === 'notFind') emitterConstraints.emit('notFindDocs', messageResults);
+		if (messageResults.type === 'errorConstraints') emitterConstraints.emit('errorDocs', messageResults);
 	})
-
+	return emitterConstraints;
 }
 
 export function storeJob(jobCompleted: types.jobID){
+	let emitterStore : EventEmitter = new EventEmitter();
 	let socketStoreJob = io.connect(urlSocket);
 	let msg = messageBuilder(jobCompleted, 'storeJob', true);
 
@@ -50,12 +46,9 @@ export function storeJob(jobCompleted: types.jobID){
 	})
 	.on('addingResponse', (messageRes: types.msg) => {
 		win.logger.log('INFO', `Message receive from server (add job request) \n ${JSON.stringify(messageRes)}`);
-		if (messageRes.type === 'success'){
-
-		}
-		if (messageRes.type === 'errorAddjob'){
-
-		}
+		
+		if (messageRes.type === 'success') emitterStore.emit('addSuccess', messageRes);
+		if (messageRes.type === 'errorAddjob') emitterStore.emit('addError', messageRes);
 	})
 }
 
@@ -65,7 +58,7 @@ export function storeJob(jobCompleted: types.jobID){
 * @event : event type 
 */
 function messageBuilder(data: types.jobConstr | types.jobID , event: string, store: boolean = false){
-	let message = {	'type' : store ? 'Store' : 'Request',
+	let message = {	'type' : store ? 'Store' : 'request',
 				'value' : event,
 				'data' : data
 	}

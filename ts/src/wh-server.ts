@@ -58,7 +58,7 @@ export let startServerExpress = function(port: number) : void{
 	app.post('/pushConstraints', function (req: any, res:any) {
 
 		let msgExpress: types.msg = {
-			'type' : 'Request',
+			'type' : 'request',
 			'value' : 'express',
 			'data' : {}
 		}
@@ -75,7 +75,7 @@ export let startServerExpress = function(port: number) : void{
 			[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'notfind', noResults]
 			res.send(msgExpress);
 		})
-		.on('expressfailed', (error) => {
+		.on('expressFailed', (error) => {
 			[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'error', error]
 			res.send(msgExpress);
 		})
@@ -84,7 +84,7 @@ export let startServerExpress = function(port: number) : void{
 	// route /storeJob that request adding a complete job in the couchDB database
 	app.post('/storeJob', function (req: any, res: any) {
 		let msgExpress: types.msg = {
-			'type' : 'Request',
+			'type' : 'request',
 			'value' : 'express',
 			'data' : {}
 		}

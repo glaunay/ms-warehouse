@@ -11,6 +11,7 @@ import fs = require('fs');
 import glob = require('glob');
 import jsonfile = require('jsonfile');
 import nanoDB = require('nano');
+//let nanoDB = require('nano')({requestDefaults:{pool:{maxSockets: Infinity}}})
 import program = require('commander');
 // Required modules
 import * as dbMod from './lib/db-module';
@@ -36,7 +37,6 @@ let portExpress: number = 7687;
 let portSocket: number = 7688;
 let portDB: number = 5984; // default port for couchDB
 let configContent: any = null;
-
 /*
 * Commander package that simplify the usage of commands line.
 */
@@ -102,8 +102,8 @@ if (configContent.hasOwnProperty('portCouch')) portDB = configContent.portCouch;
 
 //let nano = nanoDB('http://vreymond:couch@localhost:5984');
 export let url: string = `http://${accountDB}:couch@${addressDB}:${portDB}`;
-
 let nano = nanoDB(url)
+
 
 /*
 * couchDB database creation part. 
@@ -112,16 +112,16 @@ let nano = nanoDB(url)
 */
 nano.db.destroy(nameDB, function(err: any) {
 	if (err && err.statusCode != 404){
-		win.logger.log('ERROR', 'Destroying ' + nameDB +' database')
+		win.logger.log('ERROR', `when destroying ${nameDB} database`);
 		throw err;
 	}
 
 	nano.db.create(nameDB, function(err: any) {
 		if (err){
-			win.logger.log('ERROR', 'during creation of the database \'' + nameDB + '\' :')
+			win.logger.log('ERROR', `during creation of the database '${nameDB}' : \n`);
 			throw err;
 		}
-		win.logger.log('SUCCESS', 'Database ' + nameDB + ' created' + '\n')
+		win.logger.log('SUCCESS', `database ${nameDB} created \n`);
 		emitter.emit('created'); 	// emit the event 'created' when done
 	})
 })
@@ -129,8 +129,6 @@ nano.db.destroy(nameDB, function(err: any) {
 // Once the database created, and if the index option is specified, we start the indexation.
 emitter.on('created', () => {
 	if (index) indexation(configContent.previousCacheDir);
-	console.log("created")
-	// TO DO: Case when port is used
 	//starting express server
 	server.startServerExpress(portExpress);
 	//starting socket server + listeners
@@ -200,6 +198,7 @@ export function constraintsCall(constraints: types.jobConstr, connectType: strin
 * #pathResult : list of all jobID.json path found in all caches directory.
 */
 function indexation(cacheArray: string[]) : void{
+
 	let pathResult: string[] = globCaches(cacheArray);
 	// TO DO: check is jobID.json is empty file, or if {}
 	
@@ -214,7 +213,7 @@ function indexation(cacheArray: string[]) : void{
 	//let dataToCouch: types.jobID[] = pathResult.filter((elem) => addIDtoDoc(elem, directorySearch(elem)));
 	//let dataToCouch: types.jobID[] = dataToFilter.filter(function(n) { return n != undefined; });
 
-	win.logger.log('DEBUG', 'Number of jobID.json content in list: ' + dataToCouch.length + '\n' + JSON.stringify(dataToCouch) + '\n')
+	win.logger.log('DEBUG', `number of jobID.json content in list ${dataToCouch.length} \n ${JSON.stringify(dataToCouch)}`);
 	// TO DO add logger size too big
 	dbMod.addToDB(dataToCouch,nameDB).on('addSucceed', () => {
 		emitter.emit('indexDone');
@@ -228,6 +227,7 @@ function indexation(cacheArray: string[]) : void{
 * #mergedIndex : transforminf array of array into a simple array.
 */
 function globCaches(pathsArray: string[]) : string[]{
+
 	let deepIndex: any = [];
 	let mergedIndex: string[];
 
@@ -245,12 +245,12 @@ function globCaches(pathsArray: string[]) : string[]{
 	// finding pattern of jobID.json inside cache path
 	for (let element in pathsArray){
 		deepIndex.push(glob.sync(pathsArray[element] + "/**/jobID\.json", {follow : true}));
-		win.logger.log('INFO', deepIndex[element].length + ' jobID.json file(s) found in directory ' + pathsArray[element])
+		win.logger.log('INFO', `${deepIndex[element].length} jobID.json file(s) found in directory ${pathsArray[element]}`);
 	}
 
 	// merged array of array into simple array of all path that contain a jobID.json file
 	mergedIndex = [].concat.apply([], deepIndex);
-	win.logger.log('DEBUG', 'List of all jobID.json file(s) found: ' + '\n' + JSON.stringify(mergedIndex) + '\n');
+	win.logger.log('DEBUG', `list of all jobID.json file(s) found \n ${JSON.stringify(mergedIndex)} \n`);
 
 	return mergedIndex;
 }
@@ -268,15 +268,16 @@ function directorySearch(directoryPath: string): string{
 	let uuidArray: any = directoryPath.match(uuidregexV4);
 	let uuidDir: any = null;
 
-	win.logger.log('DEBUG', 'List of all uuid pattern inside a jobID.json path: ' + '\n' + JSON.stringify(uuidArray) + '\n')
+	win.logger.log('DEBUG', `list of all uuid pattern inside a jobID.json path \n ${JSON.stringify(uuidArray)}`);
+
 	if (uuidArray != null){
 		uuidDir = uuidArray.pop()  // retrieving the last element of uuidArray
 	}
 	else{
-		win.logger.log('WARNING', 'No uuid key found in: ' + directoryPath);
+		win.logger.log('WARNING', `no uuid key found in: ${directoryPath}`);
 	}
 
-	win.logger.log('DEBUG', 'uuid of the directory that contain a jobID.json file ' + uuidDir);
+	win.logger.log('DEBUG', `uuid of the directory that contain a jobID.json file ${uuidDir}`);
 	return uuidDir
 }
 
@@ -287,19 +288,22 @@ function directorySearch(directoryPath: string): string{
 * #file : content of a jobID.json file.
 */
 function addIDtoDoc(path: string, uuid: string) : types.jobID | null {
+
 	let file: types.jobID;
 	//TO DO, some checks???
+	if (typeof(path) !== 'string'){
+		win.logger.log('WARNING', `path given is not a string type : \n ${path}`)
+	}
 
 	try{
 		file = jsonfile.readFileSync(path);
 	}
 	catch(err){
-		win.logger.log('WARNING', ' while reading the json file ' + path + ' : \n' + err)
+		win.logger.log('WARNING', `while reading the json file ${path} : \n ${err}`);
 		return null;
 	}
 
-	if (Array.isArray(file)) console.log('toto')
-	file["_id"] = uuid;
+	if (Array.isArray(file)) file["_id"] = uuid;
 
 	return file;
 }
@@ -321,6 +325,7 @@ function addIDtoDoc(path: string, uuid: string) : types.jobID | null {
 * (4) : listener on testRequest function. This function accept the query builded with constraintsToQuery.
 */
 function constraintsToQuery(constraints: types.jobConstr, either: boolean = false) : EventEmitter{
+
 	let constEmitter : EventEmitter = new EventEmitter;
 	let query: types.query = {"selector": {}};
 	let strConstr = JSON.stringify(constraints);
@@ -359,6 +364,7 @@ function constraintsToQuery(constraints: types.jobConstr, either: boolean = fals
 	win.logger.log('DEBUG', 'query: ' + JSON.stringify(query))
 
 	dbMod.testRequest(query, nameDB).on('requestDone', (data) => { // (4)
+		//data = JSON.parse(data);
 		if(!data.docs.length) {
 			constEmitter.emit('noDocsFound', data)
 		}
@@ -376,7 +382,8 @@ function constraintsToQuery(constraints: types.jobConstr, either: boolean = fals
 * function storeJob that call addToDb function with a job.
 * @job : job that will store into the couchDB database.
 */
-export function storeJob(job: types.jobID): EventEmitter {
+export function storeJob(job: types.jobID | types.jobID[]): EventEmitter {
+
 	let storeEmitter: EventEmitter = new EventEmitter();
 
 	dbMod.addToDB(job, nameDB).on('addSucceed', () => {

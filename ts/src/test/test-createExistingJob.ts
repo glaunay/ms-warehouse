@@ -1,7 +1,6 @@
 /*
 	Socket client test.
-	Will be connected to the warehouse client to create the socket connection.
-	Then, the client will send the constraints to the server through the socket connection.
+	Will check the existence of a job in the warehouse database created by the test-socket.ts file.
 */
 
 // Required packages
@@ -26,29 +25,14 @@ if (program.verbose){
 	}
 } 
 
-// constraints for testing
+// constraints for existing job (created by test-socket.ts file)
 let constraints: types.jobConstr = {
-	"script": null, "coreScript": "7b8459fdb1eee409262251c429c48814",
-	"inputs": {
-		"file1.inp": "7726e41aaafd85054aa6c9d4747dec7b"
-	}
-}
-
-let jobID_Test: types.jobID = {
-	"script":"/Users/vreymond/Stage/Projet/ms-warehouse/run_hex.sh",
-	"exportVar": {
-		"hexFlags":" -nocuda -ncpu 16 ",
-		"hexScript":"/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"
-	},
-	"modules": ["naccess","hex"],
-	"tagTask":"hex",
 	"coreScript" : "61d743a3-6371-4830-b1ca-15db6fbbb02c",
 	"inputs" : {
 		"file1.inp" : "aaf4d3b5-e5a3-44a3-8bc5-bde61fad671a",
 		"file2.inp" : "b01ba442-be19-4c45-b6a6-345e0ffb6230"
 	}
 }
-
 
 /*
 * function createJobByExpress that will check if job already exist inside the coiuchDB database before creating it.
@@ -58,14 +42,5 @@ function createJobBySocket(constraints: types.jobConstr){
 	client.pushConstraints(constraints);
 }
 
-/*
-* function onJobComp that simulate a completed job that we want to store into the couchDB database
-* @data : data to store
-* NOT IMPLEMENTED YET
-*/
-function onJobComp(data: any) {
-	client.storeJob(jobID_Test);
-}
 
 createJobBySocket(constraints);
-onJobComp(jobID_Test);
