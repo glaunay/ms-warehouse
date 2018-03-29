@@ -12,32 +12,27 @@ export interface msg {
 	data: objMap
 }
 
-// jobID type
-//interface jobID_notNull {
-export interface jobID {
+// Job serialized interface
+export interface jobSerialInterface {
 	cmd?: string,
-	script: string,
-	exportVar: {},
-	modules: string[],
-	tagTask: string,
-	coreScript: string, // value is hash
-	inputs: objMap, // contain file name as key and hash pattern as value
-	_id?: string
+	script?: string,
+	exportVar?: objMap,
+	modules?: string[],
+	tagTask?: string,
+	scriptHash: string,
+	inputHash?: objMap
 }
 
-//add job serialized extends from jobID
-
-// Interface for the job constraints. Every key are optional
-export interface jobConstr{
-	cmd?: string,
+// Constraints interface
+export interface jobSerialConstraints {
+	cmd?: string | null,
 	script?: string | null,
-	exportVar?: {} | null,
+	exportVar?: objMap | null,
 	modules?: string[] | null,
 	tagTask?: string | null,
-	coreScript?: string | null, // value is hash // remove corescript
-	inputs?: objMap | null,
-	[key: string] : any // to avoid index signature problem(type has an implicitely 'any' type)
-	// add _id key???
+	scriptHash?: string | null,
+	inputHash?: objMap | null,
+	[key: string] : any
 }
 
 // Simple interface for nano query
@@ -58,4 +53,32 @@ export function isObjMap(obj: any): obj is objMap {
 }
 
 
+/*
+	Old interfaces version of jobID and Constraints
+*/
 
+// // jobID type
+// //interface jobID_notNull {
+// export interface jobID {
+// 	cmd?: string,
+// 	script: string,
+// 	exportVar: {},
+// 	modules: string[],
+// 	tagTask: string,
+// 	coreScript: string, // value is hash
+// 	inputs: objMap, // contain file name as key and hash pattern as value
+// 	_id?: string
+// }
+
+// // Interface for the job constraints. Every key are optional
+// export interface jobConstr{
+// 	cmd?: string,
+// 	script?: string | null,
+// 	exportVar?: {} | null,
+// 	modules?: string[] | null,
+// 	tagTask?: string | null,
+// 	coreScript?: string | null, // value is hash // remove corescript
+// 	inputs?: objMap | null,
+// 	[key: string] : any // to avoid index signature problem(type has an implicitely 'any' type)
+// 	// add _id key???
+// }

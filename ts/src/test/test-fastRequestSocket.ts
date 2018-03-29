@@ -29,21 +29,21 @@ if (program.verbose){
 } 
 
 // constraints for testing
-let constraints: types.jobConstr = {
-	"script": null, "coreScript": "7b8459fdb1eee409262251c429c48814",
-	"inputs": {
+let constraints: types.jobSerialConstraints = {
+	"script": null, "scriptHash": "7b8459fdb1eee409262251c429c48814",
+	"inputHash": {
 		"file1.inp": "7726e41aaafd85054aa6c9d4747dec7b"
 	}
 }
 
-let jobID_Test: types.jobID = { "script": "/Users/vreymond/Stage/Projet/ms-warehouse/run_hex.sh",
+let jobID_Test: types.jobSerialInterface = { "script": "/Users/vreymond/Stage/Projet/ms-warehouse/run_hex.sh",
     "exportVar":
      { "hexFlags": " -nocuda -ncpu 16 ",
        "hexScript": "/software/mobi/hex/8.1.1/exe/hex8.1.1.x64" },
     "modules": [ "naccess", "hex"],
     "tagTask": "hex",
-    "coreScript": "61d743a3-6371-4830-b1ca-15db6fbbb02c",
-   "inputs":
+    "scriptHash": "61d743a3-6371-4830-b1ca-15db6fbbb02c",
+    "inputHash":
      { "file1.inp": "aaf4d3b5-e5a3-44a3-8bc5-bde61fad671a",
        "file2.inp": "b01ba442-be19-4c45-b6a6-345e0ffb6230" }}
 
@@ -52,7 +52,7 @@ let jobID_Test: types.jobID = { "script": "/Users/vreymond/Stage/Projet/ms-wareh
 * function createJobByExpress that will check if job already exist inside the coiuchDB database before creating it.
 * @constraints : constraints we want to check
 */
-function createJobBySocket(constraints: types.jobConstr){
+function createJobBySocket(constraints: types.jobSerialConstraints){
 	client.pushConstraints(constraints);
 }
 
@@ -61,7 +61,7 @@ function createJobBySocket(constraints: types.jobConstr){
 * @data : data to store
 * NOT IMPLEMENTED YET
 */
-function onJobComp(data: any) {
+function onJobComp(data: types.jobSerialInterface) {
 	client.storeJob(jobID_Test);
 }
 

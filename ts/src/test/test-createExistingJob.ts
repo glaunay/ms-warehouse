@@ -26,9 +26,9 @@ if (program.verbose){
 } 
 
 // constraints for existing job (created by test-socket.ts file)
-let constraints: types.jobConstr = {
-	"coreScript" : "61d743a3-6371-4830-b1ca-15db6fbbb02c",
-	"inputs" : {
+let constraints: types.jobSerialConstraints = {
+	"scriptHash" : "61d743a3-6371-4830-b1ca-15db6fbbb02c",
+	"inputHash" : {
 		"file1.inp" : "aaf4d3b5-e5a3-44a3-8bc5-bde61fad671a",
 		"file2.inp" : "b01ba442-be19-4c45-b6a6-345e0ffb6230"
 	}
@@ -38,7 +38,7 @@ let constraints: types.jobConstr = {
 * function createJobByExpress that will check if job already exist inside the coiuchDB database before creating it.
 * @constraints : constraints we want to check
 */
-function createJobBySocket(constraints: types.jobConstr){
+function createJobBySocket(constraints: types.jobSerialConstraints){
 	client.pushConstraints(constraints);
 }
 

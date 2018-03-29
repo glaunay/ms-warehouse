@@ -124,6 +124,9 @@ nano.db.destroy(nameDB, function (err) {
     });
 });
 // Once the database created, and if the index option is specified, we start the indexation.
+/*
+* Starting listening on express port and socket port
+*/
 emitter.on('created', () => {
     if (index)
         indexation(configContent.previousCacheDir);
@@ -150,9 +153,13 @@ emitter.on('created', () => {
             packet.data({});
             server.push('success', packet = packet);
         })
-            .on('storeErr', (err) => {
-            packet.data(err);
+            .on('storError', (docsAddFailed) => {
+            packet.data(docsAddFailed);
             server.push('errorAddJob', packet = packet);
+        })
+            .on('curlErr', (err) => {
+            packet.data(err);
+            server.push('curlError', packet = packet);
         });
     });
 });
@@ -197,11 +204,10 @@ function indexation(cacheArray) {
     // directorySearch function return the name of the directory (uuid) that contain the jobID.json file.
     let dataToCouch = [];
     for (let path of pathResult) {
-        let result = addIDtoDoc(path, directorySearch(path));
+        let result = extractDoc(path, directorySearch(path));
         result && dataToCouch.push(result); // this method remove "0" but we don't have "0" so it's OK
-        //res || true || dataToCouch.push(res); will stop when a true found
     }
-    //let dataToCouch: types.jobID[] = pathResult.filter((elem) => addIDtoDoc(elem, directorySearch(elem)));
+    //let dataToCouch: types.jobID[] = pathResult.filter((elem) => extractDoc(elem, directorySearch(elem)));
     //let dataToCouch: types.jobID[] = dataToFilter.filter(function(n) { return n != undefined; });
     win.logger.log('DEBUG', `number of jobID.json content in list ${dataToCouch.length} \n ${JSON.stringify(dataToCouch)}`);
     // TO DO add logger size too big
@@ -264,7 +270,7 @@ function directorySearch(directoryPath) {
 * @uuid : the uuid of the directory that contain the jobID.json file.
 * #file : content of a jobID.json file.
 */
-function addIDtoDoc(path, uuid) {
+function extractDoc(path, uuid) {
     let file;
     //TO DO, some checks???
     if (typeof (path) !== 'string') {
@@ -277,8 +283,8 @@ function addIDtoDoc(path, uuid) {
         win.logger.log('WARNING', `while reading the json file ${path} : \n ${err}`);
         return null;
     }
-    if (Array.isArray(file))
-        file["_id"] = uuid;
+    //if (Array.isArray(file)) file["_id"] = uuid;
+    //file["_id"] = uuid;
     return file;
 }
 /*
@@ -352,13 +358,22 @@ function storeJob(job) {
     dbMod.addToDB(job, nameDB).on('addSucceed', () => {
         storeEmitter.emit('storeDone');
     })
-        .on('addError', (err) => {
-        storeEmitter.emit('storeError', err);
+        .on('maxTryReach', (docsAddFailed) => {
+        storeEmitter.emit('storeError', docsAddFailed);
+    })
+        .on('callCurlErr', (err) => {
+        storeEmitter.emit('curlError', err);
     });
     return storeEmitter;
 }
 exports.storeJob = storeJob;
 // Remove?
-emitter.on('indexDone', (log) => {
-    win.logger.log('INFO', 'Event occured');
+emitter.on('indexDone', () => {
+    win.logger.log('INFO', 'Indexation succeed properly');
+})
+    .on('maxTryReach', (docListFailed) => {
+    win.logger.log('WARNING', `adding failed for this following list of document: \n ${docListFailed} `);
+})
+    .on('callCurlErr', (err) => {
+    win.logger.log('ERROR', `curl command failed: \n ${err}`);
 });

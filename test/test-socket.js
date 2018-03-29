@@ -25,8 +25,8 @@ if (program.verbose) {
 }
 // constraints for testing
 let constraints = {
-    "script": null, "coreScript": "7b8459fdb1eee409262251c429c48814",
-    "inputs": {
+    "script": null, "scriptHash": "7b8459fdb1eee409262251c429c48814",
+    "inputHash": {
         "file1.inp": "7726e41aaafd85054aa6c9d4747dec7b"
     }
 };
@@ -38,8 +38,8 @@ let jobID_Test = {
     },
     "modules": ["naccess", "hex"],
     "tagTask": "hex",
-    "coreScript": "61d743a3-6371-4830-b1ca-15db6fbbb02c",
-    "inputs": {
+    "scriptHash": "61d743a3-6371-4830-b1ca-15db6fbbb02c",
+    "inputHash": {
         "file1.inp": "aaf4d3b5-e5a3-44a3-8bc5-bde61fad671a",
         "file2.inp": "b01ba442-be19-4c45-b6a6-345e0ffb6230"
     }

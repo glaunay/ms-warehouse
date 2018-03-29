@@ -13,36 +13,6 @@ import win = require('../lib/logger');
 // connection to couchDb database with logs
 let nano = nanoDB('http://vreymond:couch@localhost:5984');
 
-
-/*
-* Function that allows the insertion of data inside the database.
-* @data : contain a jobID content type or an array of jobID type content.
-* @nameDB : name of the database to insert data.
-* #addEmitter : new instance of EventEmitter class.
-* #db : simple alias for the database name using nano function use().
-* #docList : array that contain data. If data is a simple jobID content, putting it into docList array.
-*/
-export function _addToDB (data: types.jobID | types.jobID[], nameDB: string): EventEmitter {
-	let addEmitter: EventEmitter = new EventEmitter();
-	let db: any = nano.use(nameDB);
-
-	// Test is data is a list
-	let docList: types.jobID[] = Array.isArray(data) ? data : [data];
-
-		db.bulk({docs: docList}, function(err: any, body: any) {		// nano function bulk() to add some data
-           	if (err) {
-               	win.logger.log('ERROR', 'Insertion from jobID.json file in database')
-               	win.logger.log('ERROR', err);
-               	addEmitter.emit('addError', err);
-            }
-            else{
-            	win.logger.log('SUCCESS', `Insertion of ${docList.length} jobID.json files in ${nameDB}`)
-            	addEmitter.emit('addSucceed');
-            }
-        });
-	return addEmitter;
-}
-
 /*
 * Function that accept a query and request couchDb with nano structure.
 * @query : mango query is required to be accepted by couchDb 
@@ -72,20 +42,6 @@ export function testRequest(query: types.query, nameDB: string): EventEmitter{
 			reqEmitter.emit('requestDone', jsonChunkRes )
 		}
 	})
-	// just to test if the query work with constraints
-	// nano.request({db: nameDB,
-	// 		method: 'POST',
-	// 		doc: '_find',
-	// 		body: query
-			
-	// 	}, function(err:any, data:any){
-	// 		if(err){
-	// 			win.logger.log('requestError', err)
-	// 		}
-	// 		else{
-	// 			reqEmitter.emit('requestDone', data);
-	// 		}			
-	// 	})
 	return reqEmitter;
 }
 
@@ -96,12 +52,12 @@ export function testRequest(query: types.query, nameDB: string): EventEmitter{
 * curl -X PUT http://vreymond:couch@127.0.0.1:5984/warehouse/"$id" -d '{"file1.inp": "7726e41aaafd85054aa6c9d4747dec7b"}'
 * curl -d '{"docs":[{"key":"baz","name":"bazzel"},{"key":"bar","name":"barry"}]}' -X POST $DB/_bulk_docs
 */
-export function addToDB (data: types.jobID | types.jobID[], nameDB: string): EventEmitter {
+export function addToDB (data: types.jobSerialInterface | types.jobSerialInterface[], nameDB: string): EventEmitter {
 	//cnt++;
 	//win.logger.log('CRITICAL', 'cnt = ' + cnt)
 	let addEmitter: EventEmitter = new EventEmitter();
 	// Test is data is a list
-	let docList: types.jobID[] = Array.isArray(data) ? data : [data];
+	let docList: types.jobSerialInterface[] = Array.isArray(data) ? data : [data];
 
 	let addObj: addData = new addData(docList, nameDB);
 
@@ -204,14 +160,14 @@ export function addToDB (data: types.jobID | types.jobID[], nameDB: string): Eve
 * (7) : _curl function recursive call.
 */
 class addData extends EventEmitter{
-	docList: types.jobID[];
+	docList: types.jobSerialInterface[];
 	nameDB: string;
 	chunkRes: string;
 	chunkError: string;
 	nbTest: number;
 	nbMax: number;
 
-	constructor(_docList: types.jobID[], _nameDB: string){
+	constructor(_docList: types.jobSerialInterface[], _nameDB: string){
 		super();
 		this.docList = _docList;
 		this.nameDB = _nameDB;
@@ -275,7 +231,55 @@ class addData extends EventEmitter{
 	}
 }
 
+// ---------------------------------------------------------------------------------
+// Nano Version
+/*
+* Function that allows the insertion of data inside the database.
+* @data : contain a jobID content type or an array of jobID type content.
+* @nameDB : name of the database to insert data.
+* #addEmitter : new instance of EventEmitter class.
+* #db : simple alias for the database name using nano function use().
+* #docList : array that contain data. If data is a simple jobID content, putting it into docList array.
+*/
+export function _addToDB (data: types.jobSerialInterface | types.jobSerialInterface[], nameDB: string): EventEmitter {
+	let addEmitter: EventEmitter = new EventEmitter();
+	let db: any = nano.use(nameDB);
 
+	// Test is data is a list
+	let docList: types.jobSerialInterface[] = Array.isArray(data) ? data : [data];
+
+		db.bulk({docs: docList}, function(err: any, body: any) {		// nano function bulk() to add some data
+           	if (err) {
+               	win.logger.log('ERROR', 'Insertion from jobID.json file in database')
+               	win.logger.log('ERROR', err);
+               	addEmitter.emit('addError', err);
+            }
+            else{
+            	win.logger.log('SUCCESS', `Insertion of ${docList.length} jobID.json files in ${nameDB}`)
+            	addEmitter.emit('addSucceed');
+            }
+        });
+	return addEmitter;
+}
+
+export function _testRequest(query: types.query, nameDB: string): EventEmitter{
+	let reqEmitter : EventEmitter = new EventEmitter();
+
+	nano.request({db: nameDB,
+			method: 'POST',
+			doc: '_find',
+			body: query
+
+		}, function(err:any, data:any){
+			if(err){
+				win.logger.log('requestError', err)
+			}
+			else{
+				reqEmitter.emit('requestDone', data);
+			}			
+		})
+	return reqEmitter;
+}
 
 
 

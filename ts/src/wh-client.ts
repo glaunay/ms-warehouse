@@ -17,7 +17,7 @@ let urlSocket: string = "http://localhost:7688";
 * #socket : socket client connection on adress.
 * #msg : message passed inside the socket connection, using the messageBuilder fonction
 */
-export function pushConstraints(constraints: types.jobConstr) : EventEmitter {
+export function pushConstraints(constraints: types.jobSerialConstraints) : EventEmitter {
 	let emitterConstraints : EventEmitter = new EventEmitter();
 	let socket = io.connect(urlSocket);
 	//let socketConstraints = io.connect(main.urlSocket);
@@ -36,7 +36,7 @@ export function pushConstraints(constraints: types.jobConstr) : EventEmitter {
 	return emitterConstraints;
 }
 
-export function storeJob(jobCompleted: types.jobID){
+export function storeJob(jobCompleted: types.jobSerialInterface){
 	let emitterStore : EventEmitter = new EventEmitter();
 	let socketStoreJob = io.connect(urlSocket);
 	let msg = messageBuilder(jobCompleted, 'storeJob', true);
@@ -57,7 +57,7 @@ export function storeJob(jobCompleted: types.jobID){
 * @constraints : constraints we want to be checked
 * @event : event type 
 */
-function messageBuilder(data: types.jobConstr | types.jobID , event: string, store: boolean = false){
+function messageBuilder(data: types.jobSerialConstraints | types.jobSerialInterface , event: string, store: boolean = false){
 	let message = {	'type' : store ? 'Store' : 'request',
 				'value' : event,
 				'data' : data

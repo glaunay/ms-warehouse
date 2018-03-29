@@ -95,7 +95,11 @@ export let startServerExpress = function(port: number) : void{
 			[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', {}];
 			res.send(msgExpress);
 		})
-		.on('storeError', (err) => {
+		.on('storeError', (docsAddFailed) => {
+			[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', docsAddFailed];
+			res.send(msgExpress);
+		})
+		.on('curlError', (err) => {
 			[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', err];
 			res.send(msgExpress);
 		})
@@ -144,7 +148,7 @@ export function push(type: string, packet: packetManager){
 	}
 	// emit unique event once the constraints request is done from the couchDB. returning results to client
 	if(type === 'find' || type === 'notFind' || type === 'errorConstraints') packet.socket.emit('resultsConstraints', msg);
-	if(type === 'success' || type ==='errorAddJob') packet.socket.emit('addingResponse', msg);
+	if(type === 'success' || type === 'errorAddJob' || type === 'curlError') packet.socket.emit('addingResponse', msg);
 }
 
 

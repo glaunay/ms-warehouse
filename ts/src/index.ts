@@ -127,6 +127,9 @@ nano.db.destroy(nameDB, function(err: any) {
 })
 
 // Once the database created, and if the index option is specified, we start the indexation.
+/*
+* Starting listening on express port and socket port
+*/
 emitter.on('created', () => {
 	if (index) indexation(configContent.previousCacheDir);
 	//starting express server
@@ -152,9 +155,13 @@ emitter.on('created', () => {
 			packet.data({});
 			server.push('success', packet = packet);
 		})
-		.on('storeErr', (err) => {
-			packet.data(err);
+		.on('storError', (docsAddFailed) => {
+			packet.data(docsAddFailed);
 			server.push('errorAddJob', packet = packet);
+		})
+		.on('curlErr', (err) => {
+			packet.data(err);
+			server.push('curlError', packet = packet);
 		})
 	})
 })
@@ -165,7 +172,7 @@ emitter.on('created', () => {
 * @constraints : constraints to check 
 * @connectType : specify wich connection type
 */
-export function constraintsCall(constraints: types.jobConstr, connectType: string) : EventEmitter {
+export function constraintsCall(constraints: types.jobSerialConstraints, connectType: string) : EventEmitter {
 
 	let emitterCall: EventEmitter = new EventEmitter()
 	// if docs found in couchDB database
@@ -204,13 +211,12 @@ function indexation(cacheArray: string[]) : void{
 	
 	// Adding "_id" key to all jobID.json content from pathResult.
 	// directorySearch function return the name of the directory (uuid) that contain the jobID.json file.
-	let dataToCouch: types.jobID[] = [];
+	let dataToCouch: types.jobSerialInterface[] = [];
 	for (let path of pathResult) {
-		let result: types.jobID | null = addIDtoDoc(path, directorySearch(path));
+		let result: types.jobSerialInterface | null = extractDoc(path, directorySearch(path));
 		result && dataToCouch.push(result); // this method remove "0" but we don't have "0" so it's OK
-		//res || true || dataToCouch.push(res); will stop when a true found
 	}
-	//let dataToCouch: types.jobID[] = pathResult.filter((elem) => addIDtoDoc(elem, directorySearch(elem)));
+	//let dataToCouch: types.jobID[] = pathResult.filter((elem) => extractDoc(elem, directorySearch(elem)));
 	//let dataToCouch: types.jobID[] = dataToFilter.filter(function(n) { return n != undefined; });
 
 	win.logger.log('DEBUG', `number of jobID.json content in list ${dataToCouch.length} \n ${JSON.stringify(dataToCouch)}`);
@@ -287,9 +293,9 @@ function directorySearch(directoryPath: string): string{
 * @uuid : the uuid of the directory that contain the jobID.json file.
 * #file : content of a jobID.json file.
 */
-function addIDtoDoc(path: string, uuid: string) : types.jobID | null {
+function extractDoc(path: string, uuid: string) : types.jobSerialInterface | null {
 
-	let file: types.jobID;
+	let file: types.jobSerialInterface;
 	//TO DO, some checks???
 	if (typeof(path) !== 'string'){
 		win.logger.log('WARNING', `path given is not a string type : \n ${path}`)
@@ -303,7 +309,8 @@ function addIDtoDoc(path: string, uuid: string) : types.jobID | null {
 		return null;
 	}
 
-	if (Array.isArray(file)) file["_id"] = uuid;
+	//if (Array.isArray(file)) file["_id"] = uuid;
+	//file["_id"] = uuid;
 
 	return file;
 }
@@ -324,7 +331,7 @@ function addIDtoDoc(path: string, uuid: string) : types.jobID | null {
 *			If elem is not an objMap type, we do the same thing without the "$in" structure
 * (4) : listener on testRequest function. This function accept the query builded with constraintsToQuery.
 */
-function constraintsToQuery(constraints: types.jobConstr, either: boolean = false) : EventEmitter{
+function constraintsToQuery(constraints: types.jobSerialConstraints, either: boolean = false) : EventEmitter{
 
 	let constEmitter : EventEmitter = new EventEmitter;
 	let query: types.query = {"selector": {}};
@@ -382,15 +389,18 @@ function constraintsToQuery(constraints: types.jobConstr, either: boolean = fals
 * function storeJob that call addToDb function with a job.
 * @job : job that will store into the couchDB database.
 */
-export function storeJob(job: types.jobID | types.jobID[]): EventEmitter {
+export function storeJob(job: types.jobSerialInterface | types.jobSerialInterface[]): EventEmitter {
 
 	let storeEmitter: EventEmitter = new EventEmitter();
 
 	dbMod.addToDB(job, nameDB).on('addSucceed', () => {
 		storeEmitter.emit('storeDone');
 	})
-	.on('addError', (err) => {
-		storeEmitter.emit('storeError', err);
+	.on('maxTryReach', (docsAddFailed) => {
+		storeEmitter.emit('storeError', docsAddFailed)
+	})
+	.on('callCurlErr', (err) => {
+		storeEmitter.emit('curlError', err);
 	})
 
 	return storeEmitter;
@@ -398,8 +408,14 @@ export function storeJob(job: types.jobID | types.jobID[]): EventEmitter {
 }
 
 // Remove?
-emitter.on('indexDone', (log) => {
-	win.logger.log('INFO', 'Event occured')
+emitter.on('indexDone', () => {
+	win.logger.log('INFO', 'Indexation succeed properly');
+})
+.on('maxTryReach', (docListFailed) => {
+	win.logger.log('WARNING', `adding failed for this following list of document: \n ${docListFailed} `);
+})
+.on('callCurlErr', (err) => {
+	win.logger.log('ERROR', `curl command failed: \n ${err}`);
 })
 
 

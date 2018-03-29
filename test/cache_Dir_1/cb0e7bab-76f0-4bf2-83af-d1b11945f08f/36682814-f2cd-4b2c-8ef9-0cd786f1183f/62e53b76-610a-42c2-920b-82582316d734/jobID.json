@@ -6,8 +6,8 @@
 	},
 	"modules": ["naccess","hex"],
 	"tagTask":"hex",
-	"coreScript" : "6bf6cfa3d2e7c44eddba4630d74d96c1",
-	"inputs" : {
+	"scriptHash" : "6bf6cfa3d2e7c44eddba4630d74d96c1",
+	"inputHash" : {
 		"file1.inp" : "cd0b21a1c1a6283b52ad319c36db1298",
 		"file2.inp" : "a24536700ec311064415c3207908f701",
 		"file3.inp" : "32e74737709da09e532176888f52d833"
