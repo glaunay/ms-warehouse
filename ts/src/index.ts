@@ -110,6 +110,7 @@ if (configContent.hasOwnProperty('portCouch')) portDB = configContent.portCouch;
 
 //let nano = nanoDB('http://vreymond:couch@localhost:5984');
 export let url: string = `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}`;
+console.log(url);
 let nano = nanoDB(url)
 
 
