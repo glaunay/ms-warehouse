@@ -220,7 +220,7 @@ function indexation(cacheArray) {
     //let dataToCouch: types.jobID[] = dataToFilter.filter(function(n) { return n != undefined; });
     win.logger.log('DEBUG', `number of jobID.json content in list ${dataToCouch.length} \n ${JSON.stringify(dataToCouch)}`);
     // TO DO add logger size too big
-    dbMod.addToDB(dataToCouch, nameDB).on('addSucceed', () => {
+    dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB).on('addSucceed', () => {
         emitter.emit('indexDone');
     });
 }
@@ -344,7 +344,7 @@ function constraintsToQuery(constraints, either = false) {
         }
     });
     win.logger.log('DEBUG', 'query: ' + JSON.stringify(query));
-    dbMod.testRequest(query, nameDB).on('requestDone', (data) => {
+    dbMod.testRequest(query, nameDB, accountDB, passwordDB).on('requestDone', (data) => {
         //data = JSON.parse(data);
         if (!data.docs.length) {
             constEmitter.emit('noDocsFound', data);
@@ -377,7 +377,7 @@ function storeJob(job) {
     // 	.on('callCurlErr', (err) => {
     // 		storeEmitter.emit('curlError', err);
     // 	})
-    dbMod.addToDB(job, nameDB).on('addSucceed', () => {
+    dbMod.addToDB(job, nameDB, accountDB, passwordDB).on('addSucceed', () => {
         storeEmitter.emit('storeDone');
     })
         .on('maxTryReach', (docsAddFailed) => {

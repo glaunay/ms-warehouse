@@ -11,17 +11,17 @@ import * as types from '../types/index';
 import win = require('../lib/logger');
 
 // connection to couchDb database with logs
-let nano = nanoDB('http://vreymond:couch@localhost:5984');
+//let nano = nanoDB('http://vreymond:couch@localhost:5984');
 
 /*
 * Function that accept a query and request couchDb with nano structure.
 * @query : mango query is required to be accepted by couchDb 
 */
-export function testRequest(query: types.query, nameDB: string): EventEmitter{
+export function testRequest(query: types.query, nameDB: string, accountName: string, passwordDB: string): EventEmitter{
 	let reqEmitter : EventEmitter = new EventEmitter();
 	let chunkRes = '';
 	let chunkError = '';
-	let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-H','charset=utf-8','-d', `${JSON.stringify(query)}`, '-X', 'POST', 'http://vreymond:couch@127.0.0.1:5984/' + nameDB + '/_find'])
+	let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-H','charset=utf-8','-d', `${JSON.stringify(query)}`, '-X', 'POST', 'http://'+accountName+':'+passwordDB+'@127.0.0.1:5984/' + nameDB + '/_find'])
 	curl.stdout.on('data', (data: any) => {
 		chunkRes += data.toString('utf8');
 	})
@@ -52,15 +52,14 @@ export function testRequest(query: types.query, nameDB: string): EventEmitter{
 * curl -X PUT http://vreymond:couch@127.0.0.1:5984/warehouse/"$id" -d '{"file1.inp": "7726e41aaafd85054aa6c9d4747dec7b"}'
 * curl -d '{"docs":[{"key":"baz","name":"bazzel"},{"key":"bar","name":"barry"}]}' -X POST $DB/_bulk_docs
 */
-export function addToDB (data: types.jobSerialInterface | types.jobSerialInterface[], nameDB: string): EventEmitter {
+export function addToDB (data: types.jobSerialInterface | types.jobSerialInterface[], nameDB: string, accountName: string, passwordDB: string): EventEmitter {
 	//cnt++;
 	//win.logger.log('CRITICAL', 'cnt = ' + cnt)
-	
 	let addEmitter: EventEmitter = new EventEmitter();
 	// Test is data is a list
 	let docList: types.jobSerialInterface[] = Array.isArray(data) ? data : [data];
 
-	let addObj: addData = new addData(docList, nameDB);
+	let addObj: addData = new addData(docList, nameDB, accountName, passwordDB);
 
 	addObj.on('addOk', () =>{
 		win.logger.log('SUCCESS', `Insertion of ${docList.length} jobID.json files in ${nameDB}`)
@@ -163,15 +162,19 @@ export function addToDB (data: types.jobSerialInterface | types.jobSerialInterfa
 class addData extends EventEmitter{
 	docList: types.jobSerialInterface[];
 	nameDB: string;
+	accountName: string,
+	passwordDB: string,
 	chunkRes: string;
 	chunkError: string;
 	//nbTest: number;
 	nbMax: number;
 
-	constructor(_docList: types.jobSerialInterface[], _nameDB: string){
+	constructor(_docList: types.jobSerialInterface[], _nameDB: string, _accountName: string, _passwordDB: string){
 		super();
 		this.docList = _docList;
 		this.nameDB = _nameDB;
+		this.accountName = _accountName,
+		this.passwordDB = _passwordDB,
 		this.chunkRes = '';
 		this.chunkError = '';
 		//this.nbTest = 0;
@@ -184,7 +187,7 @@ class addData extends EventEmitter{
 
 		let self: addData = this;
 		// (1)
-		let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-d', '{"docs":'+JSON.stringify(self.docList)+'}', '-X', 'POST', 'http://vreymond:couch@127.0.0.1:5984/' + self.nameDB + '/_bulk_docs']);
+		let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-d', '{"docs":'+JSON.stringify(self.docList)+'}', '-X', 'POST', 'http://'+self.accountName+':'+self.passwordDB+'@127.0.0.1:5984/' + self.nameDB + '/_bulk_docs']);
 		//self.nbTest++;
 		self.nbMax--;
 		// (2)
