@@ -37,6 +37,7 @@ let pathConfig;
 let emitter = new EventEmitter();
 let nameDB = "warehouse"; // default value
 let accountDB = "";
+let passwordDB = "";
 let addressDB = "localhost";
 let portExpress;
 let portSocket;
@@ -102,12 +103,15 @@ else {
 //if(program.port && program.port != "") port = program.port;
 if (configContent.hasOwnProperty('accountDBName'))
     accountDB = configContent.accountDBName;
+if (configContent.hasOwnProperty('password'))
+    passwordDB = configContent.password;
 if (configContent.hasOwnProperty('databaseName'))
     nameDB = configContent.databaseName;
 if (configContent.hasOwnProperty('portCouch'))
     portDB = configContent.portCouch;
 //let nano = nanoDB('http://vreymond:couch@localhost:5984');
-exports.url = `http://${accountDB}:couch@${addressDB}:${portDB}`;
+exports.url = `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}`;
+console.log(exports.url);
 let nano = nanoDB(exports.url);
 /*
 * couchDB database creation part.
