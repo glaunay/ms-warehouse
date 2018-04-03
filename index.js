@@ -49,7 +49,7 @@ program
     .option('-c, --config <path>', 'Load config file')
     .option('-i, --index', 'Run indexation of cache directories')
     .option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)')
-    .option('-x, --express <port>', '', 7687)
+    .option('-x, --express <port>', 'Specify the express port number', 7687)
     .option('-s, --socket <port>', '', 7688)
     .parse(process.argv);
 /*
