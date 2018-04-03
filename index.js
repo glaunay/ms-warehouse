@@ -16,6 +16,7 @@ const EventEmitter = require("events");
 const glob = require("glob");
 const jsonfile = require("jsonfile");
 const nanoDB = require("nano");
+const splitArray = require("split-array");
 //let nanoDB = require('nano')({requestDefaults:{pool:{maxSockets: Infinity}}})
 const program = require("commander");
 // Required modules
@@ -37,8 +38,8 @@ let emitter = new EventEmitter();
 let nameDB = "warehouse"; // default value
 let accountDB = "";
 let addressDB = "localhost";
-let portExpress = 7687;
-let portSocket = 7688;
+let portExpress;
+let portSocket;
 let portDB = 5984; // default port for couchDB
 let configContent = null;
 /*
@@ -48,6 +49,8 @@ program
     .option('-c, --config <path>', 'Load config file')
     .option('-i, --index', 'Run indexation of cache directories')
     .option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)')
+    .option('-x, --express <port>', '', 7687)
+    .option('-s, --socket <port>', '', 7688)
     .parse(process.argv);
 /*
 * This is an options check part.
@@ -61,6 +64,8 @@ program
 *	- if index (3)
 *		this option ask the program to run the indexation feature.
 */
+portExpress = program.express;
+portSocket = program.socket;
 if (program.config && program.config != "") {
     pathConfig = program.config;
     if (program.verbose) {
@@ -355,6 +360,19 @@ function constraintsToQuery(constraints, either = false) {
 */
 function storeJob(job) {
     let storeEmitter = new EventEmitter();
+    //<any>job = arraySplit(<any>job);
+    // console.log(job.length)
+    // for(let elem of job){
+    // 	console.log(elem.length)
+    // 	dbMod.addToDB(elem, nameDB).on('addSucceed', () => {
+    // 		storeEmitter.emit('storeDone');
+    // 	})
+    // 	.on('maxTryReach', (docsAddFailed) => {
+    // 		storeEmitter.emit('storeError', docsAddFailed)
+    // 	})
+    // 	.on('callCurlErr', (err) => {
+    // 		storeEmitter.emit('curlError', err);
+    // 	})
     dbMod.addToDB(job, nameDB).on('addSucceed', () => {
         storeEmitter.emit('storeDone');
     })
@@ -377,3 +395,9 @@ emitter.on('indexDone', () => {
     .on('callCurlErr', (err) => {
     win.logger.log('ERROR', `curl command failed: \n ${err}`);
 });
+function arraySplit(arrayToSplit) {
+    let array = splitArray(arrayToSplit, 200);
+    // console.log(array[0])
+    // console.log(array[0].length)
+    return array;
+}

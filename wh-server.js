@@ -44,8 +44,8 @@ class packetManager {
 * #res.send : correspond to the response from the server to the request of the client
 */
 exports.startServerExpress = function (port) {
-    app.use(parser.json());
-    app.use(parser.urlencoded({ extended: true }));
+    app.use(parser.json({ limit: 1024102420, type: 'application/json' }));
+    app.use(parser.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000, type: 'application/x-www-form-urlencoded' }));
     // route /pushConstraints that request constraints check in couchDB database
     app.post('/pushConstraints', function (req, res) {
         let msgExpress = {
@@ -76,7 +76,10 @@ exports.startServerExpress = function (port) {
             'value': 'express',
             'data': {}
         };
+        // let bulkArray = arraySplit(req.body);
+        // console.log(bulkArray[500].length)
         win.logger.log('DEBUG', `Json data receive from '/storeJob' \n ${JSON.stringify(req.body)}`);
+        //console.log(req.body.length);
         main.storeJob(req.body).on('storeDone', () => {
             [msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', {}];
             res.send(msgExpress);
@@ -89,6 +92,33 @@ exports.startServerExpress = function (port) {
             [msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', err];
             res.send(msgExpress);
         });
+        // 	bulkArray.forEach(function(elem){
+        // 	 main.storeJob(req.body).on('storeDone', () => {
+        // 		[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', {}];
+        // 		res.send(msgExpress);
+        // 	})
+        // 	.on('storeError', (docsAddFailed) => {
+        // 		[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', docsAddFailed];
+        // 		res.send(msgExpress);
+        // 	})
+        // 	.on('curlError', (err) => {
+        // 		[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', err];
+        // 		res.send(msgExpress);
+        // 	})
+        // })
+        // })
+        // main.storeJob(req.body).on('storeDone', () => {
+        // 	[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', {}];
+        // 	res.send(msgExpress);
+        // })
+        // .on('storeError', (docsAddFailed) => {
+        // 	[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', docsAddFailed];
+        // 	res.send(msgExpress);
+        // })
+        // .on('curlError', (err) => {
+        // 	[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', err];
+        // 	res.send(msgExpress);
+        // })
     });
     // Listening express on port
     app.listen(port, () => {
@@ -135,3 +165,9 @@ function push(type, packet) {
         packet.socket.emit('addingResponse', msg);
 }
 exports.push = push;
+// function arraySplit(arrayToSplit: types.jobSerialInterface[]): types.jobSerialInterface[][]{
+// 	let array: types.jobSerialInterface[][] = splitArray(arrayToSplit, 200);
+// 	// console.log(array[0])
+// 	// console.log(array[0].length)
+// 	return array;
+// }

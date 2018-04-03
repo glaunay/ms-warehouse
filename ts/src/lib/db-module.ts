@@ -55,6 +55,7 @@ export function testRequest(query: types.query, nameDB: string): EventEmitter{
 export function addToDB (data: types.jobSerialInterface | types.jobSerialInterface[], nameDB: string): EventEmitter {
 	//cnt++;
 	//win.logger.log('CRITICAL', 'cnt = ' + cnt)
+	
 	let addEmitter: EventEmitter = new EventEmitter();
 	// Test is data is a list
 	let docList: types.jobSerialInterface[] = Array.isArray(data) ? data : [data];
@@ -164,7 +165,7 @@ class addData extends EventEmitter{
 	nameDB: string;
 	chunkRes: string;
 	chunkError: string;
-	nbTest: number;
+	//nbTest: number;
 	nbMax: number;
 
 	constructor(_docList: types.jobSerialInterface[], _nameDB: string){
@@ -173,17 +174,18 @@ class addData extends EventEmitter{
 		this.nameDB = _nameDB;
 		this.chunkRes = '';
 		this.chunkError = '';
-		this.nbTest = 0;
+		//this.nbTest = 0;
 		this.nbMax = 3;
 		let self: addData = this;
 		self._curl();
 	}
 
 	_curl(){
+
 		let self: addData = this;
 		// (1)
 		let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-d', '{"docs":'+JSON.stringify(self.docList)+'}', '-X', 'POST', 'http://vreymond:couch@127.0.0.1:5984/' + self.nameDB + '/_bulk_docs']);
-		self.nbTest++;
+		//self.nbTest++;
 		self.nbMax--;
 		// (2)
 		curl.stdout.on('data', (data: any) => {
@@ -204,24 +206,37 @@ class addData extends EventEmitter{
 			else{
 				// (4)
 				let result: any[] = jsonChunkRes.map(function(elem: any){
-					if(elem["ok"] === true) return true;
-					else return false;
+					return elem["ok"] === true;
 				})
 				// (5)
-				let checkEqual: boolean = !!result.reduce(function(a, b){ return (a === b) ? a : NaN; });
+				// result[2] = false;
+				// console.log(result)
+				//let checkEqual: boolean = !!result.reduce(function(a, b){ return (a === b) ? a : NaN; });
+				let checkEqual: boolean = true;
+				for(let elem of result){
+					if (result[0] !== elem){
+						//console.log('COURT-CIRCUITER!!!!!!!!!!!!!')
+						checkEqual = false;
+						break;
+					}
+				}
+
 				// (6)
 				if(checkEqual && result[0] === true){
 					self.emit('addOk');
 				}
 				// (7)
 				else {
+
 					// if number of try adding is equal 3, we emit a event maxTry
-					if(self.nbMax === 3){
+					if(self.nbMax === 0){
 						self.emit('maxTry', self.docList);
 					}
 					else {
 						// recursive call of _curl with data not added last iteration
 						self.docList = self.docList.filter((elem,i) => result[i] === false);
+
+						// check docLIst length
 						self._curl();
 					}
 					//let falseCount: number = result.filter(elem => elem === false).length;

@@ -11,6 +11,7 @@ import fs = require('fs');
 import glob = require('glob');
 import jsonfile = require('jsonfile');
 import nanoDB = require('nano');
+import splitArray = require('split-array');
 //let nanoDB = require('nano')({requestDefaults:{pool:{maxSockets: Infinity}}})
 import program = require('commander');
 // Required modules
@@ -33,8 +34,8 @@ let emitter: EventEmitter = new EventEmitter();
 let nameDB: string = "warehouse"; // default value
 let accountDB: string = "";
 let addressDB: string = "localhost";
-let portExpress: number = 7687;
-let portSocket: number = 7688;
+let portExpress: number;
+let portSocket: number;
 let portDB: number = 5984; // default port for couchDB
 let configContent: any = null;
 /*
@@ -43,7 +44,9 @@ let configContent: any = null;
 program
   .option('-c, --config <path>', 'Load config file')
   .option('-i, --index', 'Run indexation of cache directories')
-  .option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)') 
+  .option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)')
+  .option('-x, --express <port>', '', 7687)
+  .option('-s, --socket <port>', '', 7688)
   .parse(process.argv);
 
 /*
@@ -58,6 +61,9 @@ program
 *	- if index (3)
 *		this option ask the program to run the indexation feature.
 */
+portExpress = program.express;
+portSocket = program.socket;
+
 if (program.config && program.config != "") { // (1)
 	pathConfig = program.config;
 
@@ -392,6 +398,19 @@ function constraintsToQuery(constraints: types.jobSerialConstraints, either: boo
 export function storeJob(job: types.jobSerialInterface | types.jobSerialInterface[]): EventEmitter {
 
 	let storeEmitter: EventEmitter = new EventEmitter();
+	//<any>job = arraySplit(<any>job);
+	// console.log(job.length)
+	// for(let elem of job){
+	// 	console.log(elem.length)
+	// 	dbMod.addToDB(elem, nameDB).on('addSucceed', () => {
+	// 		storeEmitter.emit('storeDone');
+	// 	})
+	// 	.on('maxTryReach', (docsAddFailed) => {
+	// 		storeEmitter.emit('storeError', docsAddFailed)
+	// 	})
+	// 	.on('callCurlErr', (err) => {
+	// 		storeEmitter.emit('curlError', err);
+	// 	})
 
 	dbMod.addToDB(job, nameDB).on('addSucceed', () => {
 		storeEmitter.emit('storeDone');
@@ -402,10 +421,11 @@ export function storeJob(job: types.jobSerialInterface | types.jobSerialInterfac
 	.on('callCurlErr', (err) => {
 		storeEmitter.emit('curlError', err);
 	})
-
+	
 	return storeEmitter;
+	}
 
-}
+
 
 // Remove?
 emitter.on('indexDone', () => {
@@ -420,9 +440,12 @@ emitter.on('indexDone', () => {
 
 
 
-
-
-
+function arraySplit(arrayToSplit: types.jobSerialInterface[]): types.jobSerialInterface[][]{
+	let array: types.jobSerialInterface[][] = splitArray(arrayToSplit, 200);
+	// console.log(array[0])
+	// console.log(array[0].length)
+	return array;
+}
 
 
 
