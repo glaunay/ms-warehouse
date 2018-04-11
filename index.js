@@ -16,14 +16,14 @@ const EventEmitter = require("events");
 const glob = require("glob");
 const jsonfile = require("jsonfile");
 const nanoDB = require("nano");
-const splitArray = require("split-array");
 //let nanoDB = require('nano')({requestDefaults:{pool:{maxSockets: Infinity}}})
 const program = require("commander");
 // Required modules
 const dbMod = __importStar(require("./lib/db-module"));
 const server = require("./wh-server");
 const types = __importStar(require("./types/index"));
-const win = require("./lib/logger");
+//import win = require('./lib/logger');
+const logger_1 = require("./lib/logger");
 /*
 * Variable initialisation.
 * #index : false by default. Becomes true if user specifiec the indexation option.
@@ -41,7 +41,7 @@ let passwordDB = "";
 let addressDB = "localhost";
 let portExpress;
 let portSocket;
-let portDB = 5984; // default port for couchDB
+let portDB; // default port for couchDB
 let configContent = null;
 /*
 * Commander package that simplify the usage of commands line.
@@ -49,10 +49,9 @@ let configContent = null;
 program
     .option('-c, --config <path>', 'Load config file')
     .option('-i, --index', 'Run indexation of cache directories')
-    .option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)')
-    .option('-x, --express <port>', 'Specify the express port number', 7687)
-    .option('-s, --socket <port>', '', 7688)
+    .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', logger_1.setLogLevel)
     .parse(process.argv);
+logger_1.logger.log('info', "\t\t***** Starting public Warehouse MicroService *****\n");
 /*
 * This is an options check part.
 * 3 questions are asked:
@@ -65,54 +64,83 @@ program
 *	- if index (3)
 *		this option ask the program to run the indexation feature.
 */
-portExpress = program.express;
-portSocket = program.socket;
+// portSocket = program.socket
+// portExpress = program.express
 if (program.config && program.config != "") {
     pathConfig = program.config;
-    if (program.verbose) {
-        let upper = program.verbose.toUpperCase(); // change loglevel string into upper case (to match logger specifications)
-        if (win.levels.hasOwnProperty(upper)) {
-            win.logger.level = upper;
-        }
-        else {
-            win.logger.log('WARNING', `No key ${upper} found in logger.levels. Using the default INFO level`);
-        }
-    }
     try {
         configContent = jsonfile.readFileSync(pathConfig); // parsing config.file content // add try catch
     }
     catch (err) {
-        win.logger.log('ERROR', 'while readding and parsing the config file');
+        //win.logger.log('ERROR', 'while readding and parsing the config file');
+        logger_1.logger.log('error', 'while readding and parsing the config file');
         throw err;
     }
 }
 else {
-    throw win.logger.log('WARNING', 'No config file specified'); // config file must be specified.
+    logger_1.logger.log('warning', 'No config file specified');
+    throw 'stop execution';
+    //throw win.logger.log('WARNING', 'No config file specified'); // config file must be specified.
 }
 if (program.index) {
     if (configContent.hasOwnProperty('previousCacheDir')) {
         index = true;
     }
     else {
-        win.logger.log('WARNING', 'No "previousCacheDir" key found in config file');
+        //win.logger.log('WARNING', 'No "previousCacheDir" key found in config file');
+        logger_1.logger.log('warning', 'No "previousCacheDir" key found in config file. Indexation will not work.');
     }
 }
 else {
-    win.logger.log('INFO', 'No indexation asked');
+    //win.logger.log('INFO', 'No indexation asked');
+    logger_1.logger.log('info', 'No indexation asked');
 }
-//if(program.port && program.port != "") port = program.port;
+// Checking config.json content
 if (configContent.hasOwnProperty('accountDBName'))
     accountDB = configContent.accountDBName;
+else {
+    //win.logger.log('WARNING', 'No "accountDBName" key found in config.json file');
+    logger_1.logger.log('warning', 'No "accountDBName" key found in config.json file');
+    throw "stop execution";
+}
 if (configContent.hasOwnProperty('password'))
     passwordDB = configContent.password;
+else {
+    //win.logger.log('WARNING', 'No "password" key found in config.json file');
+    logger_1.logger.log('warning', 'No "password" key found in config.json file');
+    throw "stop execution";
+}
 if (configContent.hasOwnProperty('databaseName'))
     nameDB = configContent.databaseName;
+else {
+    //win.logger.log('WARNING', 'No "databaseName" key found in config.json file');
+    logger_1.logger.log('warning', 'No "databaseName" key found in config.json file');
+    throw "stop execution";
+}
 if (configContent.hasOwnProperty('portCouch'))
     portDB = configContent.portCouch;
-//let nano = nanoDB('http://vreymond:couch@localhost:5984');
-exports.url = `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}`;
-console.log(exports.url);
-let nano = nanoDB(exports.url);
+else {
+    //win.logger.log('WARNING', 'No "portCouch" key found in config.json file');
+    logger_1.logger.log('warning', 'No "portCouch" key found in config.json file');
+    throw "stop execution";
+}
+if (configContent.hasOwnProperty('portExpress'))
+    portExpress = configContent.portExpress;
+else {
+    //win.logger.log('WARNING', 'No "portExpress" key found in config.json file');
+    logger_1.logger.log('warning', 'No "portExpress" key found in config.json file');
+    throw "stop execution";
+}
+if (configContent.hasOwnProperty('portSocket'))
+    portSocket = configContent.portSocket;
+else {
+    //win.logger.log('WARNING', 'No "portSocket" key found in config.json file');
+    logger_1.logger.log('warning', 'No "portSocket" key found in config.json file');
+    throw "stop execution";
+}
+let url = `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}`;
+logger_1.logger.log('info', `Connection to "${url}"`);
+let nano = nanoDB(url);
 /*
 * couchDB database creation part.
 * First, we check if a database with the name specified already exists. If yes,
@@ -120,15 +148,18 @@ let nano = nanoDB(exports.url);
 */
 nano.db.destroy(nameDB, function (err) {
     if (err && err.statusCode != 404) {
-        win.logger.log('ERROR', `when destroying ${nameDB} database`);
+        //win.logger.log('ERROR', `when destroying ${nameDB} database`);
+        logger_1.logger.log('error', `When destroying ${nameDB} database : \n`);
         throw err;
     }
     nano.db.create(nameDB, function (err) {
         if (err) {
-            win.logger.log('ERROR', `during creation of the database '${nameDB}' : \n`);
+            //win.logger.log('ERROR', `during creation of the database '${nameDB}' : \n`);
+            logger_1.logger.log('error', `During creation of the database '${nameDB}' : \n`);
             throw err;
         }
-        win.logger.log('SUCCESS', `database ${nameDB} created \n`);
+        //win.logger.log('SUCCESS', `database ${nameDB} created \n`);
+        logger_1.logger.log('success', `Database ${nameDB} created \n`);
         emitter.emit('created'); // emit the event 'created' when done
     });
 });
@@ -182,18 +213,18 @@ function constraintsCall(constraints, connectType) {
     let emitterCall = new EventEmitter();
     // if docs found in couchDB database
     constraintsToQuery(constraints).on('docsFound', (docsResults) => {
-        win.logger.log('INFO', `Found ${docsResults.docs.length} docs for those constraints from ${connectType} request`);
-        win.logger.log('DEBUG', `Doc list found \n ${JSON.stringify(docsResults)}`);
-        win.logger.log('DEBUG', `constraints: ${JSON.stringify(constraints)}`);
+        logger_1.logger.log('info', `Found ${docsResults.docs.length} docs for those constraints from ${connectType} request`);
+        logger_1.logger.log('debug', `Doc list found \n ${JSON.stringify(docsResults)}`);
+        logger_1.logger.log('debug', `constraints: ${JSON.stringify(constraints)}`);
         emitterCall.emit(`${connectType}Succeed`, docsResults.docs);
     })
         .on('noDocsFound', (docsResults) => {
-        win.logger.log('INFO', `No docs founds for constraints`);
-        win.logger.log('DEBUG', `constraints: \n ${JSON.stringify(constraints)}`);
+        logger_1.logger.log('info', `No docs founds for constraints`);
+        logger_1.logger.log('debug', `constraints: \n ${JSON.stringify(constraints)}`);
         emitterCall.emit(`${connectType}NoResults`, docsResults.docs);
     })
         .on('errorOnConstraints', (err) => {
-        win.logger.log('WARNING', `Constraints are empty or not in the right format`);
+        logger_1.logger.log('warning', `Constraints are empty or not in the right format`);
         emitterCall.emit(`${connectType}Failed`, err);
     });
     return emitterCall;
@@ -218,10 +249,18 @@ function indexation(cacheArray) {
     }
     //let dataToCouch: types.jobID[] = pathResult.filter((elem) => extractDoc(elem, directorySearch(elem)));
     //let dataToCouch: types.jobID[] = dataToFilter.filter(function(n) { return n != undefined; });
-    win.logger.log('DEBUG', `number of jobID.json content in list ${dataToCouch.length} \n ${JSON.stringify(dataToCouch)}`);
+    logger_1.logger.log('debug', `number of jobID.json content in list ${dataToCouch.length} \n ${JSON.stringify(dataToCouch)}`);
     // TO DO add logger size too big
-    dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB).on('addSucceed', () => {
+    // dbMod.addToDB(dataToCouch,nameDB, accountDB, passwordDB).on('addSucceed', () => {
+    // 	emitter.emit('indexDone');
+    // })
+    dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB)
+        .then(() => {
+        logger_1.logger.log('success', `Insertion of ${dataToCouch.length} jobID.json files in ${nameDB}`);
         emitter.emit('indexDone');
+    })
+        .catch((err) => {
+        console.log('catch');
     });
 }
 /*
@@ -235,7 +274,8 @@ function globCaches(pathsArray) {
     let mergedIndex;
     // checking that previousCacheDir content is an array
     if (!Array.isArray(pathsArray)) {
-        throw win.logger.log('WARNING', 'previousCacheDir variable from config file is not an Array');
+        logger_1.logger.log('warning', 'previousCacheDir variable from config file is not an Array');
+        throw 'stop execution';
     }
     //checking if pathsArray contains some empty string. If yes, we do not considerate them.
     if (pathsArray.includes('')) {
@@ -245,11 +285,11 @@ function globCaches(pathsArray) {
     // finding pattern of jobID.json inside cache path
     for (let element in pathsArray) {
         deepIndex.push(glob.sync(pathsArray[element] + "/**/jobID\.json", { follow: true }));
-        win.logger.log('INFO', `${deepIndex[element].length} jobID.json file(s) found in directory ${pathsArray[element]}`);
+        logger_1.logger.log('info', `${deepIndex[element].length} jobID.json file(s) found in directory ${pathsArray[element]}`);
     }
     // merged array of array into simple array of all path that contain a jobID.json file
     mergedIndex = [].concat.apply([], deepIndex);
-    win.logger.log('DEBUG', `list of all jobID.json file(s) found \n ${JSON.stringify(mergedIndex)} \n`);
+    logger_1.logger.log('debug', `list of all jobID.json file(s) found \n ${JSON.stringify(mergedIndex)} \n`);
     return mergedIndex;
 }
 /*
@@ -263,14 +303,14 @@ function directorySearch(directoryPath) {
     let uuidregexV4 = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/ig;
     let uuidArray = directoryPath.match(uuidregexV4);
     let uuidDir = null;
-    win.logger.log('DEBUG', `list of all uuid pattern inside a jobID.json path \n ${JSON.stringify(uuidArray)}`);
+    logger_1.logger.log('debug', `list of all uuid pattern inside a jobID.json path \n ${JSON.stringify(uuidArray)}`);
     if (uuidArray != null) {
         uuidDir = uuidArray.pop(); // retrieving the last element of uuidArray
     }
     else {
-        win.logger.log('WARNING', `no uuid key found in: ${directoryPath}`);
+        logger_1.logger.log('warning', `no uuid key found in: ${directoryPath}`);
     }
-    win.logger.log('DEBUG', `uuid of the directory that contain a jobID.json file ${uuidDir}`);
+    logger_1.logger.log('debug', `uuid of the directory that contain a jobID.json file ${uuidDir}`);
     return uuidDir;
 }
 /*
@@ -283,13 +323,13 @@ function extractDoc(path, uuid) {
     let file;
     //TO DO, some checks???
     if (typeof (path) !== 'string') {
-        win.logger.log('WARNING', `path given is not a string type : \n ${path}`);
+        logger_1.logger.log('warning', `path given is not a string type : \n ${path}`);
     }
     try {
         file = jsonfile.readFileSync(path);
     }
     catch (err) {
-        win.logger.log('WARNING', `while reading the json file ${path} : \n ${err}`);
+        logger_1.logger.log('warning', `while reading the json file ${path} : \n ${err}`);
         return null;
     }
     //if (Array.isArray(file)) file["_id"] = uuid;
@@ -318,13 +358,13 @@ function constraintsToQuery(constraints, either = false) {
     let sel = query.selector;
     if (strConstr === JSON.stringify({}) || strConstr === JSON.stringify([])) {
         let error = 'Empty constraints json or array given';
-        win.logger.log('WARNING', error);
+        logger_1.logger.log('warning', error);
         constEmitter.emit('errorOnConstraints');
         return constEmitter;
     } // (1)
     if (!constraints) {
         let error = 'Constraints value is evaluated to false, maybe empty object or empty string';
-        win.logger.log('WARNING', error);
+        logger_1.logger.log('warning', error);
         constEmitter.emit('errorOnConstraints');
         return constEmitter;
     } // (1)
@@ -343,9 +383,8 @@ function constraintsToQuery(constraints, either = false) {
             either ? sel.$or.push({ [elem]: constraints[elem] }) : sel[elem] = constraints[elem];
         }
     });
-    win.logger.log('DEBUG', 'query: ' + JSON.stringify(query));
+    logger_1.logger.log('debug', 'query: ' + JSON.stringify(query));
     dbMod.testRequest(query, nameDB, accountDB, passwordDB).on('requestDone', (data) => {
-        //data = JSON.parse(data);
         if (!data.docs.length) {
             constEmitter.emit('noDocsFound', data);
         }
@@ -364,44 +403,31 @@ function constraintsToQuery(constraints, either = false) {
 */
 function storeJob(job) {
     let storeEmitter = new EventEmitter();
-    //<any>job = arraySplit(<any>job);
-    // console.log(job.length)
-    // for(let elem of job){
-    // 	console.log(elem.length)
-    // 	dbMod.addToDB(elem, nameDB).on('addSucceed', () => {
-    // 		storeEmitter.emit('storeDone');
-    // 	})
-    // 	.on('maxTryReach', (docsAddFailed) => {
-    // 		storeEmitter.emit('storeError', docsAddFailed)
-    // 	})
-    // 	.on('callCurlErr', (err) => {
-    // 		storeEmitter.emit('curlError', err);
-    // 	})
-    dbMod.addToDB(job, nameDB, accountDB, passwordDB).on('addSucceed', () => {
+    dbMod.addToDB(job, nameDB, accountDB, passwordDB)
+        .then(() => {
+        console.log('then');
+        if (Array.isArray(job)) {
+            logger_1.logger.log('success', `Insertion of ${job.length} jobID.json files in ${nameDB}`);
+        }
+        else
+            logger_1.logger.log('success', `Insertion of 1 jobID.json files in ${nameDB}`);
         storeEmitter.emit('storeDone');
     })
-        .on('maxTryReach', (docsAddFailed) => {
-        storeEmitter.emit('storeError', docsAddFailed);
-    })
-        .on('callCurlErr', (err) => {
-        storeEmitter.emit('curlError', err);
+        .catch((err) => {
+        console.log('catch');
+        console.log(err);
+        storeEmitter.emit('storeError');
     });
     return storeEmitter;
 }
 exports.storeJob = storeJob;
 // Remove?
 emitter.on('indexDone', () => {
-    win.logger.log('INFO', 'Indexation succeed properly');
+    logger_1.logger.log('info', 'Indexation succeed properly');
 })
     .on('maxTryReach', (docListFailed) => {
-    win.logger.log('WARNING', `adding failed for this following list of document: \n ${docListFailed} `);
+    logger_1.logger.log('warning', `adding failed for this following list of document: \n ${docListFailed} `);
 })
     .on('callCurlErr', (err) => {
-    win.logger.log('ERROR', `curl command failed: \n ${err}`);
+    logger_1.logger.log('error', `curl command failed: \n ${err}`);
 });
-function arraySplit(arrayToSplit) {
-    let array = splitArray(arrayToSplit, 200);
-    // console.log(array[0])
-    // console.log(array[0].length)
-    return array;
-}

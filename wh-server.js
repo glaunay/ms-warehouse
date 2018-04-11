@@ -12,7 +12,7 @@ const parser = require("body-parser");
 const http_1 = require("http");
 const express = require("express");
 const socketIo = require("socket.io");
-const win = require("./lib/logger");
+const logger_1 = require("./lib/logger");
 const main = require("./index");
 // Initiate express and socket types
 let app = express();
@@ -45,7 +45,7 @@ class packetManager {
 */
 exports.startServerExpress = function (port) {
     app.use(parser.json({ limit: 1024102420, type: 'application/json' }));
-    app.use(parser.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000, type: 'application/x-www-form-urlencoded' }));
+    app.use(parser.urlencoded({ limit: 1024102420, extended: true, parameterLimit: 50000, type: 'application/x-www-form-urlencoded' }));
     // route /pushConstraints that request constraints check in couchDB database
     app.post('/pushConstraints', function (req, res) {
         let msgExpress = {
@@ -53,7 +53,7 @@ exports.startServerExpress = function (port) {
             'value': 'express',
             'data': {}
         };
-        win.logger.log('DEBUG', `Json data receive from '/pushConstraints' \n ${JSON.stringify(req.body)}`);
+        logger_1.logger.log('debug', `Json data receive from '/pushConstraints' \n ${JSON.stringify(req.body)}`);
         // calling constraintsCall func from index.ts with req.body content and express string
         main.constraintsCall(req.body, 'express').on('expressSucceed', (results) => {
             // multiple assignation to message properties
@@ -78,7 +78,7 @@ exports.startServerExpress = function (port) {
         };
         // let bulkArray = arraySplit(req.body);
         // console.log(bulkArray[500].length)
-        win.logger.log('DEBUG', `Json data receive from '/storeJob' \n ${JSON.stringify(req.body)}`);
+        logger_1.logger.log('debug', `Json data receive from '/storeJob' \n ${JSON.stringify(req.body)}`);
         //console.log(req.body.length);
         main.storeJob(req.body).on('storeDone', () => {
             [msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', {}];
@@ -122,7 +122,7 @@ exports.startServerExpress = function (port) {
     });
     // Listening express on port
     app.listen(port, () => {
-        win.logger.log('INFO', `Running server on port ${port} for Express connections`);
+        logger_1.logger.log('info', `Running server on port ${port} for Express connections`);
     });
 };
 /*
@@ -133,11 +133,11 @@ exports.startServerExpress = function (port) {
 exports.startServerSocket = function (port) {
     let emitterSocket = new EventEmitter();
     io.listen(port);
-    win.logger.log('INFO', `Running server on port ${port} for Socket connections`);
+    logger_1.logger.log('info', `Running server on port ${port} for Socket connections`);
     // on socket connection
     io.on('connection', (socket) => {
         let packet = new packetManager(socket);
-        win.logger.log('DEBUG', `Client connected on port ${port}`);
+        logger_1.logger.log('debug', `Client connected on port ${port}`);
         socket.on('pushConstraints', (msgConst) => {
             packet.data(msgConst.data);
             emitterSocket.emit('findBySocket', packet);

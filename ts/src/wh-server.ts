@@ -14,7 +14,7 @@ import socketIo = require('socket.io');
 
 // Required modules
 import * as types from './types/index';
-import win = require('./lib/logger');
+import {logger, setLogLevel} from './lib/logger';
 import main = require('./index');
 
 // Initiate express and socket types
@@ -53,7 +53,7 @@ class packetManager {
 */
 export let startServerExpress = function(port: number) : void{
 	app.use(parser.json({limit:1024102420, type:'application/json'}));
-	app.use(parser.urlencoded({limit: '50mb', extended: true, parameterLimit:50000, type:'application/x-www-form-urlencoded'}));
+	app.use(parser.urlencoded({limit: 1024102420, extended: true, parameterLimit:50000, type:'application/x-www-form-urlencoded'}));
 
 	// route /pushConstraints that request constraints check in couchDB database
 	app.post('/pushConstraints', function (req: any, res:any) {
@@ -64,7 +64,7 @@ export let startServerExpress = function(port: number) : void{
 			'data' : {}
 		}
 
-		win.logger.log('DEBUG', `Json data receive from '/pushConstraints' \n ${JSON.stringify(req.body)}`)
+		logger.log('debug', `Json data receive from '/pushConstraints' \n ${JSON.stringify(req.body)}`)
 		
 		// calling constraintsCall func from index.ts with req.body content and express string
 		main.constraintsCall(req.body, 'express').on('expressSucceed', (results) => {
@@ -91,7 +91,7 @@ export let startServerExpress = function(port: number) : void{
 		}
 		// let bulkArray = arraySplit(req.body);
 		// console.log(bulkArray[500].length)
-		win.logger.log('DEBUG', `Json data receive from '/storeJob' \n ${JSON.stringify(req.body)}`);
+		logger.log('debug', `Json data receive from '/storeJob' \n ${JSON.stringify(req.body)}`);
 		//console.log(req.body.length);
 
 		main.storeJob(req.body).on('storeDone', () => {
@@ -140,7 +140,7 @@ export let startServerExpress = function(port: number) : void{
 	})
 	// Listening express on port
 	app.listen(port, () => {
-		win.logger.log('INFO', `Running server on port ${port} for Express connections`)
+		logger.log('info', `Running server on port ${port} for Express connections`)
 	});
 }
 
@@ -152,11 +152,11 @@ export let startServerExpress = function(port: number) : void{
 export let startServerSocket = function(port: number) : EventEmitter{
 	let emitterSocket : EventEmitter = new EventEmitter();
 	io.listen(port);
-	win.logger.log('INFO', `Running server on port ${port} for Socket connections`)
+	logger.log('info', `Running server on port ${port} for Socket connections`)
 	// on socket connection
 	io.on('connection', (socket: any) => {
 		let packet: packetManager = new packetManager(socket);
-		win.logger.log('DEBUG', `Client connected on port ${port}`);
+		logger.log('debug', `Client connected on port ${port}`);
 
 		socket.on('pushConstraints', (msgConst: types.msg) => {
 			packet.data(msgConst.data);

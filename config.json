@@ -3,5 +3,7 @@
 	"accountDBName": "vreymond",
 	"password": "couch",
 	"databaseName" : "warehouse",
-	"portCouch" : 5984
+	"portCouch" : 5984,
+	"portExpress": 7687,
+	"portSocket": 5698
 }

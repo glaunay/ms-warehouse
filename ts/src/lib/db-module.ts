@@ -5,13 +5,12 @@
 // Required packages
 import EventEmitter = require('events');
 import nanoDB = require('nano');
+import splitArray = require('split-array');
 import { spawn } from 'child_process';
 // Required modules
 import * as types from '../types/index';
-import win = require('../lib/logger');
+import {logger, setLogLevel} from '../lib/logger';
 
-// connection to couchDb database with logs
-//let nano = nanoDB('http://vreymond:couch@localhost:5984');
 
 /*
 * Function that accept a query and request couchDb with nano structure.
@@ -21,7 +20,7 @@ export function testRequest(query: types.query, nameDB: string, accountName: str
 	let reqEmitter : EventEmitter = new EventEmitter();
 	let chunkRes = '';
 	let chunkError = '';
-	let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-H','charset=utf-8','-d', `${JSON.stringify(query)}`, '-X', 'POST', 'http://'+accountName+':'+passwordDB+'@127.0.0.1:5984/' + nameDB + '/_find'])
+	let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-H','charset=utf-8','-d', `${JSON.stringify(query)}`, '-X', 'POST', `http://${accountName}:${passwordDB}@127.0.0.1:5984/${nameDB}/_find`])
 	curl.stdout.on('data', (data: any) => {
 		chunkRes += data.toString('utf8');
 	})
@@ -35,7 +34,7 @@ export function testRequest(query: types.query, nameDB: string, accountName: str
 		let jsonChunkRes = JSON.parse(chunkRes);
 		
 		if (chunkError.length > 0) {
-			win.logger.log('ERROR', 'Insertion from jobID.json file in database \n' + chunkError);
+			logger.log('error', 'Insertion from jobID.json file in database \n' + chunkError);
 			reqEmitter.emit('curlError', chunkError);
 		}
 		else{
@@ -45,96 +44,37 @@ export function testRequest(query: types.query, nameDB: string, accountName: str
 	return reqEmitter;
 }
 
-//-------------------------------------------------------------------------
-// Test with curl
+/*
+* Function addToDB that accept a single jobSerialInterface type object or an array of jobSerialInterface type object
+* @data : data attempting to be insert into the couchDB database.
+* @nameDB : name of the database.
+* @accountName : name of user account for couchDB.
+* @passwordDB : user password for couchDB
+* #docList : Transform data in array if it's a single jobSerialInterface.
+* #arrayData : If data length is higher than 500, we split array into array of 500 with the arraySplit function.
+* #addObj : addData class object, we use await before next iteration of the loop. 
+*/
+export async function addToDB (data: types.jobSerialInterface | types.jobSerialInterface[], nameDB: string, accountName: string, passwordDB: string) : Promise<any> {
+
+	let docList: types.jobSerialInterface[] = Array.isArray(data) ? data : [data];
+	let arrayData:any[] = docList.length > 500 ? arraySplit(docList, 500) : docList;
+
+	for (let elem of arrayData) {
+		let addObj: addData = new addData(elem, nameDB, accountName, passwordDB);
+		await addObj.three_curl()
+	};
+}
 
 /*
-* curl -X PUT http://vreymond:couch@127.0.0.1:5984/warehouse/"$id" -d '{"file1.inp": "7726e41aaafd85054aa6c9d4747dec7b"}'
-* curl -d '{"docs":[{"key":"baz","name":"bazzel"},{"key":"bar","name":"barry"}]}' -X POST $DB/_bulk_docs
+* Function arraySplit that can split a high array into an array of array.
+* @arrayToSplit : high length array to split.
+* @number : define the length of the splitted array
+* #array : array returned by the function, this an array of array of number variable length. 
 */
-export function addToDB (data: types.jobSerialInterface | types.jobSerialInterface[], nameDB: string, accountName: string, passwordDB: string): EventEmitter {
-	//cnt++;
-	//win.logger.log('CRITICAL', 'cnt = ' + cnt)
-	let addEmitter: EventEmitter = new EventEmitter();
-	// Test is data is a list
-	let docList: types.jobSerialInterface[] = Array.isArray(data) ? data : [data];
+function arraySplit(arrayToSplit: types.jobSerialInterface[], number: number): types.jobSerialInterface[][]{
 
-	let addObj: addData = new addData(docList, nameDB, accountName, passwordDB);
-
-	addObj.on('addOk', () =>{
-		win.logger.log('SUCCESS', `Insertion of ${docList.length} jobID.json files in ${nameDB}`)
-        addEmitter.emit('addSucceed');
-	})
-	.on('maxTry', (docListFailed) => {
-		win.logger.log('WARNING', `max try limit of adding reached, list of ${docListFailed} will not be added to the ${nameDB} database`);
-		addEmitter.emit('maxTryReach', docListFailed)
-	})
-	.on('curlError', (curlError) => {
-		win.logger.log('ERROR', `An error occured during the curl command: \n  ${curlError}`);
-		addEmitter.emit('callCurlErr', curlError);
-	})
-	// let chunkRes = '';
-	// let chunkError = '';
-
-	
-
-	// //console.log(docList)
-	// //-H "Content-Type:application/json"
-	// let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-d', '{"docs":'+JSON.stringify(docList)+'}', '-X', 'POST', 'http://vreymond:couch@127.0.0.1:5984/' + nameDB + '/_bulk_docs'])
-
-	// curl.stdout.on('data', (data: any) => {
-	// 	//console.log(data.toString('utf8'))
-	// 	chunkRes += data.toString('utf8')
-	// 	//win.logger.log('CRITICAL', 'cnt in stdout = ' + cnt)
-	// 	//console.log(`stdout: ${data}`);
-	// 	//console.log(data.toString('utf8'))
-	// 	//win.logger.log('SUCCESS', `Insertion of ${docList.length} jobID.json files in ${nameDB}`)
-	// });
-
-	// curl.stderr.on('data', (data: any) => {
-	// 	chunkError += data.toString('utf8')
-	// 	//win.logger.log('CRITICAL', 'cnt in stderr = ' + cnt)
-	// 	//console.log(`stderr: ${data}`);
-	// 	//win.logger.log('ERROR', 'Insertion from jobID.json file in database \n', data.toString('utf8'));
-
-	// });
-
-	// curl.on('close', (code: any) => {
-	// 	//win.logger.log('CRITICAL', 'cnt in close = ' + cnt)
-	// 	//console.log(`child process exited with code ${code}`);
-		
-	// 	console.log(typeof(chunkRes))
-	// 	let jsonChunkRes = eval(chunkRes);
-	// 	let jsonChunkError = eval(chunkError);
-
-	// 	if (chunkError.length > 0) {
-	// 		win.logger.log('ERROR', 'Insertion from jobID.json file in database \n' + chunkError);
-	// 		addEmitter.emit('curlError', chunkError);
-	// 	}
-	// 	else{
-	// 		let result: any[] = jsonChunkRes.map(function(elem: any){
-	// 			if(elem["ok"] === true) return true;
-	// 			else return false;
-	// 		})
-	// 		console.log(result)
-	// 		let checkEqual: boolean = !!result.reduce(function(a, b){ return (a === b) ? a : NaN; });
-
-	// 		if(checkEqual){
-	// 			win.logger.log('SUCCESS', `Insertion of ${docList.length} jobID.json files in ${nameDB}`)
- //            	addEmitter.emit('addSucceed');
-	// 		}
-	// 		else {
-	// 			let falseCount: number = result.filter(elem => elem === false).length;
-
-	// 			win.logger.log('ERROR', 'Insertion from jobID.json file in database')
- //               	win.logger.log('ERROR', jsonChunkError);
- //               	addEmitter.emit('addError', jsonChunkError);
-	// 		}
-	// 	}
-	// 	win.logger.log('CRITICAL', chunkRes);
-	// });
-	
-	return addEmitter;
+	let array: types.jobSerialInterface[][] = splitArray(arrayToSplit, number);
+	return array;
 }
 
 /*
@@ -143,13 +83,15 @@ export function addToDB (data: types.jobSerialInterface | types.jobSerialInterfa
 * @_nameDB : name of the database.
 * Class property:
 * #this.docList : contains _docList
-* #this.nameDb : contains _nameDB
+* #this.nameDB : contains _nameDB
 * #this.chunkRes : that will receive chunk part from the stdout (curl) stream.
 * #this.chunkError : that will receive chunk part from the sterr (curl) stream.
-* #this.nbTest : number of required the database to add the data.
-* #this.nbMax : maximum of calling database for a specific data (docList).
 * #result : array of the response from the database transformed into boolean.
 * #checkEqual : boolean that inform is every element of result are equal.
+*
+* Two function inside this class:
+* three_curl: this on call 3 time the curl function. We autorize max 3 try to insert data inside database before sending an error message. This function return a promise.
+* _curl: funtion that will construct the curl command using spawn tool. This function return a promise
 *
 * (1) : construct the curl command using spawn (from child_process module).
 * (2) : receive data as chunk parts from stdout or stderr streams.
@@ -162,13 +104,11 @@ export function addToDB (data: types.jobSerialInterface | types.jobSerialInterfa
 class addData extends EventEmitter{
 	docList: types.jobSerialInterface[];
 	nameDB: string;
-	accountName: string,
-	passwordDB: string,
+	accountName: string;
+	passwordDB: string;
 	chunkRes: string;
 	chunkError: string;
-	//nbTest: number;
-	nbMax: number;
-
+	
 	constructor(_docList: types.jobSerialInterface[], _nameDB: string, _accountName: string, _passwordDB: string){
 		super();
 		this.docList = _docList;
@@ -177,136 +117,93 @@ class addData extends EventEmitter{
 		this.passwordDB = _passwordDB,
 		this.chunkRes = '';
 		this.chunkError = '';
-		//this.nbTest = 0;
-		this.nbMax = 3;
 		let self: addData = this;
-		self._curl();
 	}
-
-	_curl(){
-
-		let self: addData = this;
-		// (1)
-		let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-d', '{"docs":'+JSON.stringify(self.docList)+'}', '-X', 'POST', 'http://'+self.accountName+':'+self.passwordDB+'@127.0.0.1:5984/' + self.nameDB + '/_bulk_docs']);
-		//self.nbTest++;
-		self.nbMax--;
-		// (2)
-		curl.stdout.on('data', (data: any) => {
-			self.chunkRes += data.toString('utf8');
-		});
-		// (2)
-		curl.stderr.on('data', (data: any) => {
-			self.chunkError += data.toString('utf8');
-		});
-		// (3)
-		curl.on('close', (code: any) => {
-			let jsonChunkRes = eval(self.chunkRes);
-			//let jsonChunkError = eval(self.chunkError);
-
-			if (self.chunkError.length > 0) {
-				self.emit('curlError', self.chunkError);
-			}
-			else{
-				// (4)
-				let result: any[] = jsonChunkRes.map(function(elem: any){
-					return elem["ok"] === true;
+	/*
+	* Function that will try 3 times to insert data into couchDB
+	*/
+	async three_curl(){
+		let self = this
+		let p = new Promise((resolve, reject) => {
+			self._curl()
+				.then(()=>{ 
+					//console.log("curl1 OK");
+					resolve() 
+				}) 
+				.catch(() => {
+					//console.log("curl1 PB");
+					self._curl()
+						.then(()=>{
+							//console.log("curl2 OK");
+							resolve()})				
+						.catch(() =>{
+							//console.log("curl2 PB");
+							self._curl()
+								.then(()=>{
+									//console.log("curl3 OK");
+									resolve()
+								})				
+								.catch(()=>{
+									logger.log('error','Max try adding reach')
+									//console.log("curl3 PB");
+									reject()
+								})
+						})
 				})
-				// (5)
-				// result[2] = false;
-				// console.log(result)
-				//let checkEqual: boolean = !!result.reduce(function(a, b){ return (a === b) ? a : NaN; });
-				let checkEqual: boolean = true;
-				for(let elem of result){
-					if (result[0] !== elem){
-						//console.log('COURT-CIRCUITER!!!!!!!!!!!!!')
-						checkEqual = false;
-						break;
-					}
-				}
+		});
+		return p;
+	}
 
-				// (6)
-				if(checkEqual && result[0] === true){
-					self.emit('addOk');
-				}
-				// (7)
-				else {
+	async _curl(): Promise<any> {
+		let self: addData = this;
+		let p: any = new Promise((resolve, reject) => {
+			Array.isArray(self.docList) ? self.docList : self.docList = [self.docList];
+			// (1)
+			let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-d', `{"docs": ${JSON.stringify(self.docList)}}`, '-X', 'POST', `http://${self.accountName}:${self.passwordDB}@127.0.0.1:5984/${self.nameDB}/_bulk_docs`]);
+			// (2)
+			curl.stdout.on('data', (data: any) => {
+				self.chunkRes += data.toString('utf8');
 
-					// if number of try adding is equal 3, we emit a event maxTry
-					if(self.nbMax === 0){
-						self.emit('maxTry', self.docList);
+			});
+			// (2)
+			curl.stderr.on('data', (data: any) => {
+				self.chunkError += data.toString('utf8');
+			});
+			// (3)
+			curl.on('close', (code: any) => {
+				let jsonChunkRes = eval(self.chunkRes);
+
+				if (self.chunkError.length > 0) {
+					reject(self.chunkError);
+				}
+				else{
+					// (4)
+					let result: any[] = jsonChunkRes.map(function(elem: any){
+						return elem["ok"] === true;
+					})
+					// (5)
+					let checkEqual: boolean = true;
+					for(let elem of result){
+						if (result[0] !== elem){
+							checkEqual = false;
+							break;
+						}
 					}
+					//result[0] = false
+					// (6)
+					if(checkEqual && result[0] === true){
+						resolve();
+					}
+					// (7)
 					else {
-						// recursive call of _curl with data not added last iteration
 						self.docList = self.docList.filter((elem,i) => result[i] === false);
-
-						// check docLIst length
-						self._curl();
+						self.chunkRes = '';
+						self.chunkError = '';
+						reject();
 					}
-					//let falseCount: number = result.filter(elem => elem === false).length;
 				}
-			}
+			})
 		})
+		return p;
 	}
 }
-
-// ---------------------------------------------------------------------------------
-// Nano Version
-/*
-* Function that allows the insertion of data inside the database.
-* @data : contain a jobID content type or an array of jobID type content.
-* @nameDB : name of the database to insert data.
-* #addEmitter : new instance of EventEmitter class.
-* #db : simple alias for the database name using nano function use().
-* #docList : array that contain data. If data is a simple jobID content, putting it into docList array.
-*/
-export function _addToDB (data: types.jobSerialInterface | types.jobSerialInterface[], nameDB: string): EventEmitter {
-	let addEmitter: EventEmitter = new EventEmitter();
-	let db: any = nano.use(nameDB);
-
-	// Test is data is a list
-	let docList: types.jobSerialInterface[] = Array.isArray(data) ? data : [data];
-
-		db.bulk({docs: docList}, function(err: any, body: any) {		// nano function bulk() to add some data
-           	if (err) {
-               	win.logger.log('ERROR', 'Insertion from jobID.json file in database')
-               	win.logger.log('ERROR', err);
-               	addEmitter.emit('addError', err);
-            }
-            else{
-            	win.logger.log('SUCCESS', `Insertion of ${docList.length} jobID.json files in ${nameDB}`)
-            	addEmitter.emit('addSucceed');
-            }
-        });
-	return addEmitter;
-}
-
-export function _testRequest(query: types.query, nameDB: string): EventEmitter{
-	let reqEmitter : EventEmitter = new EventEmitter();
-
-	nano.request({db: nameDB,
-			method: 'POST',
-			doc: '_find',
-			body: query
-
-		}, function(err:any, data:any){
-			if(err){
-				win.logger.log('requestError', err)
-			}
-			else{
-				reqEmitter.emit('requestDone', data);
-			}			
-		})
-	return reqEmitter;
-}
-
-
-
-
-
-
-
-
-
-
-
-

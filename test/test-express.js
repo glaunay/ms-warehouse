@@ -7,21 +7,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // Required packages
 const program = require("commander");
 const request = require("request");
-const win = require("../lib/logger");
-let urlExpress = "http://localhost:7687";
+const logger_1 = require("../lib/logger");
+let portExpress;
+let serverAddress;
 // Commander package part
 program
-    .option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)')
+    .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', logger_1.setLogLevel)
+    .option('-x, --express <port>', 'Specified the port for express connection', 7687)
+    .option('-u, --urlserver <address>', 'Specified the warehouse server url, default is "http://localhost"', "http://localhost")
     .parse(process.argv);
-if (program.verbose) {
-    let upper = program.verbose.toUpperCase(); // change loglevel string into upper case (to match logger specifications)
-    if (win.levels.hasOwnProperty(upper)) {
-        win.logger.level = upper;
-    }
-    else {
-        win.logger.log('WARNING', `No key ${upper} found in logger.levels. Using the default INFO level`);
-    }
-}
+portExpress = program.express;
+serverAddress = program.urlserver;
+let urlExpress = `${serverAddress}:${portExpress}`;
 // constraints for testing
 let constraints = {
     "script": null, "scriptHash": "7b8459fdb1eee409262251c429c48814",
@@ -53,7 +50,7 @@ function createJobByExpress(constraints) {
         body: constraints,
         json: true
     }, function (error, response, body) {
-        win.logger.log('INFO', `Message receive from server \n ${JSON.stringify(body)}`);
+        logger_1.logger.log('info', `Message receive from server \n ${JSON.stringify(body)}`);
     });
 }
 /*
@@ -67,7 +64,7 @@ function onJobComp(data) {
         body: jobID_Test,
         json: true
     }, function (error, response, body) {
-        win.logger.log('INFO', `Message receive from server \n ${JSON.stringify(body)}`);
+        logger_1.logger.log('infos', `Message receive from server \n ${JSON.stringify(body)}`);
     });
 }
 createJobByExpress(constraints);

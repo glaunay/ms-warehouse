@@ -4,12 +4,23 @@
 */
 // Required packages
 import EventEmitter = require('events');
+//import fs = require('fs');
+import jsonfile = require('jsonfile');
 import io = require('socket.io-client');
 // Required modules
 import * as types from './types/index';
-import win = require('./lib/logger');
+import {logger, setLogLevel} from './lib/logger';
 
-let urlSocket: string = "http://localhost:7688";
+let portSocket: number;
+
+let file = '../config.json'
+let config = jsonfile.readFileSync(file)
+
+portSocket = config.portSocket
+
+let urlSocket: string = `http://localhost:${portSocket}`
+
+
 
 /*
 * function push that send a message inside the socket connection to the warehouse server
@@ -27,7 +38,7 @@ export function pushConstraints(constraints: types.jobSerialConstraints) : Event
 		socket.emit('pushConstraints', msg);
 	})
 	.on('resultsConstraints', (messageResults: types.msg) => {
-		win.logger.log('INFO', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
+		logger.log('info', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
 
 		if (messageResults.type === 'find') emitterConstraints.emit('findDocs', messageResults);
 		if (messageResults.type === 'notFind') emitterConstraints.emit('notFindDocs', messageResults);
@@ -45,7 +56,7 @@ export function storeJob(jobCompleted: types.jobSerialInterface){
 		socketStoreJob.emit('storeJob', msg);
 	})
 	.on('addingResponse', (messageRes: types.msg) => {
-		win.logger.log('INFO', `Message receive from server (add job request) \n ${JSON.stringify(messageRes)}`);
+		logger.log('info', `Message receive from server (add job request) \n ${JSON.stringify(messageRes)}`);
 		
 		if (messageRes.type === 'success') emitterStore.emit('addSuccess', messageRes);
 		if (messageRes.type === 'errorAddjob') emitterStore.emit('addError', messageRes);
@@ -62,7 +73,7 @@ function messageBuilder(data: types.jobSerialConstraints | types.jobSerialInterf
 				'value' : event,
 				'data' : data
 	}
-	win.logger.log('DEBUG',`Message value before sending: \n ${JSON.stringify(message)}`)
+	logger.log('debug',`Message value before sending: \n ${JSON.stringify(message)}`)
 	return message;
 
 }

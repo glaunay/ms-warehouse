@@ -9,24 +9,23 @@ import program = require('commander');
 import request = require('request');
 // Required modules
 import * as types from '../types/index';
-import win = require('../lib/logger');
+import {logger, setLogLevel} from '../lib/logger';
 
-let urlExpress: string = "http://localhost:7687";
+let portExpress: number;
+let serverAddress: string;
 
 // Commander package part
 program
-  .option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)') 
+  .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', setLogLevel)
+  .option('-x, --express <port>', 'Specified the port for express connection', 7687)
+  .option('-u, --urlserver <address>', 'Specified the warehouse server url, default is "http://localhost"', "http://localhost")
   .parse(process.argv);
 
-if (program.verbose){
-	let upper: string = program.verbose.toUpperCase();		// change loglevel string into upper case (to match logger specifications)
-	if (win.levels.hasOwnProperty(upper)){
-		win.logger.level = upper;
-	}
-	else {
-		win.logger.log('WARNING', `No key ${upper} found in logger.levels. Using the default INFO level`);
-	}
-} 
+
+portExpress = program.express;
+serverAddress = program.urlserver;
+
+let urlExpress: string = `${serverAddress}:${portExpress}`
 
 // constraints for testing
 let constraints: types.jobSerialConstraints = {
@@ -61,7 +60,7 @@ function createJobByExpress(constraints: types.jobSerialConstraints){
 		body: constraints,
 		json: true
 	}, function(error: any, response:any, body:any){
-		win.logger.log('INFO', `Message receive from server \n ${JSON.stringify(body)}`)
+		logger.log('info', `Message receive from server \n ${JSON.stringify(body)}`)
 	});
 }
 
@@ -76,7 +75,7 @@ function onJobComp(data: types.jobSerialInterface) {
 		body: jobID_Test,
 		json: true
 	}, function(error: any, response:any, body:any){
-		win.logger.log('INFO', `Message receive from server \n ${JSON.stringify(body)}`)
+		logger.log('info', `Message receive from server \n ${JSON.stringify(body)}`)
 	});
 }
 

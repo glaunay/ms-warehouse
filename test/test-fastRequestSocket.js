@@ -11,20 +11,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const program = require("commander");
 // Required modules
 const client = require("../wh-client");
-const win = require("../lib/logger");
+const logger_1 = require("../lib/logger");
 // Commander package part
 program
-    .option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)')
+    .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', logger_1.setLogLevel)
     .parse(process.argv);
-if (program.verbose) {
-    let upper = program.verbose.toUpperCase(); // change loglevel string into upper case (to match logger specifications)
-    if (win.levels.hasOwnProperty(upper)) {
-        win.logger.level = upper;
-    }
-    else {
-        win.logger.log('WARNING', `No key ${upper} found in logger.levels. Using the default INFO level`);
-    }
-}
 // constraints for testing
 let constraints = {
     "script": null, "scriptHash": "7b8459fdb1eee409262251c429c48814",
