@@ -3,8 +3,19 @@
 	This allow the user to add some job into a couchDB database.
 	Some options must be specified into the command line to run this microservice (see options parts). 
 */
-
+// (function() {
+//     var childProcess = require("child_process");
+//     var oldSpawn = childProcess.spawn;
+//     function mySpawn() {
+//         console.log('spawn called');
+//         console.log(arguments);
+//         var result = oldSpawn.apply(this, arguments);
+//         return result;
+//     }
+//     childProcess.spawn = mySpawn;
+// })();
 // Required packages
+import { spawn, exec } from 'child_process';
 import deepEqual = require('deep-equal');
 import EventEmitter = require('events');
 import fs = require('fs');
@@ -30,6 +41,8 @@ import {logger, setLogLevel} from './lib/logger';
 * #nano : connection to database with logs.
 */
 let index: boolean = false;
+let dump: boolean = false;
+let dumpload: boolean = false;
 let pathConfig: any;
 let emitter: EventEmitter = new EventEmitter();
 let nameDB: string = "warehouse"; // default value
@@ -47,6 +60,8 @@ program
   .option('-c, --config <path>', 'Load config file')
   .option('-i, --index', 'Run indexation of cache directories')
   .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', setLogLevel)
+  .option('-d, --dump', 'Dump the database into json file after indexation')
+  .option('-l, --dumpload', 'Load dump from json file to construct the database')
   //.option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)')
   //.option('-s, --socket <port>', 'Specified the socket port')
   //.option('-x, --express <port>', 'Specified the express port')
@@ -103,43 +118,40 @@ else{
 	logger.log('info','No indexation asked');
 }
 
+if (program.dump) dump = true;
+if (program.dumpload) dumpload = true;
+
 // Checking config.json content
 if (configContent.hasOwnProperty('accountDBName')) accountDB = configContent.accountDBName;
 else {
-	//win.logger.log('WARNING', 'No "accountDBName" key found in config.json file');
 	logger.log('warning','No "accountDBName" key found in config.json file')
 	throw "stop execution";
 }
 
 if (configContent.hasOwnProperty('password')) passwordDB = configContent.password;
 else {
-	//win.logger.log('WARNING', 'No "password" key found in config.json file');
 	logger.log('warning','No "password" key found in config.json file')
 	throw "stop execution";
 }
 
 if (configContent.hasOwnProperty('databaseName')) nameDB = configContent.databaseName;
 else{
-	//win.logger.log('WARNING', 'No "databaseName" key found in config.json file');
 	logger.log('warning','No "databaseName" key found in config.json file')
 	throw "stop execution";
 }
 
 if (configContent.hasOwnProperty('portCouch')) portDB = configContent.portCouch;
 else {
-	//win.logger.log('WARNING', 'No "portCouch" key found in config.json file');
 	logger.log('warning','No "portCouch" key found in config.json file')
 	throw "stop execution";
 }
 if (configContent.hasOwnProperty('portExpress')) portExpress = configContent.portExpress;
 else {
-	//win.logger.log('WARNING', 'No "portExpress" key found in config.json file');
 	logger.log('warning','No "portExpress" key found in config.json file')
 	throw "stop execution";
 }
 if (configContent.hasOwnProperty('portSocket')) portSocket = configContent.portSocket;
 else {
-	//win.logger.log('WARNING', 'No "portSocket" key found in config.json file');
 	logger.log('warning','No "portSocket" key found in config.json file')
 	throw "stop execution";
 }
@@ -177,7 +189,22 @@ nano.db.destroy(nameDB, function(err: any) {
 * Starting listening on express port and socket port
 */
 emitter.on('created', () => {
-	if (index) indexation(configContent.previousCacheDir);
+	if(dumpload){
+		let file = jsonfile.readFileSync('./warehouse.json');
+		for(let elem of file.docs){
+			delete elem["_id"]
+		}
+		storeJob(file.docs)
+		//loadDumping();
+	}
+	else{
+		if (index) {
+			indexation(configContent.previousCacheDir).on('indexDone', () => {
+				if (dump) dumpingDatabase();
+			});
+		}
+	}
+
 	//starting express server
 	server.startServerExpress(portExpress);
 	//starting socket server + listeners
@@ -210,7 +237,104 @@ emitter.on('created', () => {
 			server.push('curlError', packet = packet);
 		})
 	})
+	.on('indexRequest', (packet: any) => {
+		indexation(packet.data()).on('indexDone', () => {
+			logger.log('info', 'Indexation succeed properly');
+			packet.data({});
+			server.push('indexSuccess', packet = packet);
+		})
+		.on('indexError', (err) => {
+			logger.log('error', `Indexation failed \n ${err}`);
+			packet.data(err);
+			server.push('indexFailed', packet = packet);
+		})
+	})
 })
+
+// function loadDumping(): void {
+
+// 	exec('cdbload -d warehouse < ./warehouse.json', (error, stdout, stderr) => {
+//   		if (error) {
+  			
+//     		console.error(`exec error: ${error}`);
+//     		return;
+//   		}
+//   		console.log(`stdout: ${stdout}`);
+//   		logger.log('success', `Loading dump file of ${nameDB}.json succeed`)
+//   		console.log(`stderr: ${stderr}`);
+// 	});
+
+// 	let chunkRes = '';
+// 	let chunkError = '';
+// 	try {
+// 		let curl = spawn('cdbload', ['-d', `${nameDB}`, '<', `./${nameDB}.json`])
+// 		curl.stdout.on('data', (data: any) => {
+// 			chunkRes += data.toString('utf8');
+// 		})
+
+// 		curl.stderr.on('data', (data: any) => {
+// 			chunkError += data.toString('utf8');
+// 		})
+
+// 		curl.on('close', (code: any) => {
+
+// 			let split: string[] = chunkError.replace(/(\r\n\t|\n|\r\t)/gm," ").split(" ")
+// 			let jsonChunkRes = JSON.parse(chunkRes);
+// 			console.log(chunkError)
+// 			if (chunkError.length > 0 && !split.includes('201') && !split.includes('Created')) {
+// 				logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
+			
+// 			}
+// 			else{
+// 				logger.log('success', `Loading dump file of ${nameDB}.json succeed`);
+// 			}
+// 		})
+// 	}
+// 	catch(err){
+// 		logger.log('error', `Error while creating the curl command \n ${err}`)
+// 	}
+	
+// 	// cdbload -d warehouse < warehouse.json
+// }
+
+/*
+* Function dumpingDatabase 
+*/
+function dumpingDatabase(): void{
+	//let dumpEmitter: EventEmitter = new EventEmitter();
+	let chunkRes = '';
+	let chunkError = '';
+	let curl = spawn('cdbdump', ['-d', `${nameDB}`]);
+
+	curl.stdout.on('data', (data: any) => {
+		chunkRes += data.toString('utf8');
+	})
+
+	curl.stderr.on('data', (data: any) => {
+		chunkError += data.toString('utf8');
+	})
+
+	curl.on('close', (code: any) => {
+		let split: string[] = chunkError.replace(/(\r\n\t|\n|\r\t)/gm," ").split(" ")
+		let jsonChunkRes = JSON.parse(chunkRes);
+		console.log(chunkError)
+		if (chunkError.length > 0 && !split.includes('200') && !split.includes('OK')) {
+			logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
+			//dumpEmitter.emit('dumpError', chunkError);
+		}
+		else{
+			var file = `./${nameDB}.json`
+			var fileContent = jsonChunkRes;
+ 			try {
+ 				jsonfile.writeFile(file, fileContent);
+ 				logger.log('success', `Dumping of ${nameDB} database succeed`);
+ 			}
+ 			catch(err){
+ 				logger.log('error', `Dumping of ${nameDB} database failed \n ${err}`)
+ 			}
+		}
+	})
+}
 
 /*
 * function that manage the call to the constraintsToQuery function. This part is listening on three event 
@@ -250,11 +374,12 @@ export function constraintsCall(constraints: types.jobSerialConstraints, connect
 * #dataToCouch : array that will contain all jobID.json file that attempt to be add inside the couchDB database.
 * #pathResult : list of all jobID.json path found in all caches directory.
 */
-function indexation(cacheArray: string[]) : void {
+function indexation(cacheArray: string[]) : EventEmitter {
 
+	let emitterIndex: EventEmitter = new EventEmitter(); 
 	let pathResult: string[] = globCaches(cacheArray);
 	// TO DO: check is jobID.json is empty file, or if {}
-	
+
 	// Adding "_id" key to all jobID.json content from pathResult.
 	// directorySearch function return the name of the directory (uuid) that contain the jobID.json file.
 	let dataToCouch: types.jobSerialInterface[] = [];
@@ -273,12 +398,14 @@ function indexation(cacheArray: string[]) : void {
 	dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB)
 		.then(() => {
 			logger.log('success', `Insertion of ${dataToCouch.length} jobID.json files in ${nameDB}`);
-			emitter.emit('indexDone');
+			emitterIndex.emit('indexDone');
 		})
 		.catch((err) => {
 			console.log('catch');
+			emitterIndex.emit('indexError', err);
 		})
-		
+	
+	return emitterIndex
 }
 
 /*
@@ -448,7 +575,6 @@ function constraintsToQuery(constraints: types.jobSerialConstraints, either: boo
 export function storeJob(job: types.jobSerialInterface | types.jobSerialInterface[]): EventEmitter {
 
 	let storeEmitter: EventEmitter = new EventEmitter();
-	
 	dbMod.addToDB(job, nameDB, accountDB, passwordDB)
 		.then(() => {
 			console.log('then')

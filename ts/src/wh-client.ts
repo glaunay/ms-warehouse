@@ -13,7 +13,7 @@ import {logger, setLogLevel} from './lib/logger';
 
 let portSocket: number;
 
-let file = '../config.json'
+let file = './config.json'
 let config = jsonfile.readFileSync(file)
 
 portSocket = config.portSocket
@@ -28,7 +28,7 @@ let urlSocket: string = `http://localhost:${portSocket}`
 * #socket : socket client connection on adress.
 * #msg : message passed inside the socket connection, using the messageBuilder fonction
 */
-export function pushConstraints(constraints: types.jobSerialConstraints) : EventEmitter {
+export function pushConstraints(constraints: types.jobSerialConstraints): EventEmitter {
 	let emitterConstraints : EventEmitter = new EventEmitter();
 	let socket = io.connect(urlSocket);
 	//let socketConstraints = io.connect(main.urlSocket);
@@ -47,7 +47,7 @@ export function pushConstraints(constraints: types.jobSerialConstraints) : Event
 	return emitterConstraints;
 }
 
-export function storeJob(jobCompleted: types.jobSerialInterface){
+export function storeJob(jobCompleted: types.jobSerialInterface): EventEmitter{
 	let emitterStore : EventEmitter = new EventEmitter();
 	let socketStoreJob = io.connect(urlSocket);
 	let msg = messageBuilder(jobCompleted, 'storeJob', true);
@@ -61,15 +61,33 @@ export function storeJob(jobCompleted: types.jobSerialInterface){
 		if (messageRes.type === 'success') emitterStore.emit('addSuccess', messageRes);
 		if (messageRes.type === 'errorAddjob') emitterStore.emit('addError', messageRes);
 	})
+	return emitterStore;
 }
+
+export function indexationRequest(pathArray: string[]): EventEmitter{
+	let emitterIndexation : EventEmitter = new EventEmitter();
+	let socketIndexation = io.connect(urlSocket);
+	let msg = messageBuilder(pathArray, 'indexation', false, true)
+
+	socketIndexation.on('connect', function() {
+		socketIndexation.emit('indexation', msg);
+	})
+	.on('indexationResponse', (messageIndex: types.msg) => {
+		if (messageIndex.type === 'indexSuccess') emitterIndexation.emit('indexOK');
+		if (messageIndex.type === 'indexFailed') emitterIndexation.emit('indexError');
+	})
+
+	return emitterIndexation;
+}
+
 
 /*
 * function messageBuilder create a message from constraints and event type
 * @constraints : constraints we want to be checked
 * @event : event type 
 */
-function messageBuilder(data: types.jobSerialConstraints | types.jobSerialInterface , event: string, store: boolean = false){
-	let message = {	'type' : store ? 'Store' : 'request',
+function messageBuilder(data: types.jobSerialConstraints | types.jobSerialInterface , event: string, store: boolean = false, index: boolean = false){
+	let message = {	'type' : store ? 'store' : index ? 'indexation' :  'request',
 				'value' : event,
 				'data' : data
 	}

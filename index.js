@@ -1,9 +1,4 @@
 "use strict";
-/*
-    Main file of the warehouse microservice.
-    This allow the user to add some job into a couchDB database.
-    Some options must be specified into the command line to run this microservice (see options parts).
-*/
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
@@ -12,6 +7,24 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 }
 Object.defineProperty(exports, "__esModule", { value: true });
+/*
+    Main file of the warehouse microservice.
+    This allow the user to add some job into a couchDB database.
+    Some options must be specified into the command line to run this microservice (see options parts).
+*/
+// (function() {
+//     var childProcess = require("child_process");
+//     var oldSpawn = childProcess.spawn;
+//     function mySpawn() {
+//         console.log('spawn called');
+//         console.log(arguments);
+//         var result = oldSpawn.apply(this, arguments);
+//         return result;
+//     }
+//     childProcess.spawn = mySpawn;
+// })();
+// Required packages
+const child_process_1 = require("child_process");
 const EventEmitter = require("events");
 const glob = require("glob");
 const jsonfile = require("jsonfile");
@@ -33,6 +46,8 @@ const logger_1 = require("./lib/logger");
 * #nano : connection to database with logs.
 */
 let index = false;
+let dump = false;
+let dumpload = false;
 let pathConfig;
 let emitter = new EventEmitter();
 let nameDB = "warehouse"; // default value
@@ -50,6 +65,8 @@ program
     .option('-c, --config <path>', 'Load config file')
     .option('-i, --index', 'Run indexation of cache directories')
     .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', logger_1.setLogLevel)
+    .option('-d, --dump', 'Dump the database into json file after indexation')
+    .option('-l, --dumpload', 'Load dump from json file to construct the database')
     .parse(process.argv);
 logger_1.logger.log('info', "\t\t***** Starting public Warehouse MicroService *****\n");
 /*
@@ -95,46 +112,44 @@ else {
     //win.logger.log('INFO', 'No indexation asked');
     logger_1.logger.log('info', 'No indexation asked');
 }
+if (program.dump)
+    dump = true;
+if (program.dumpload)
+    dumpload = true;
 // Checking config.json content
 if (configContent.hasOwnProperty('accountDBName'))
     accountDB = configContent.accountDBName;
 else {
-    //win.logger.log('WARNING', 'No "accountDBName" key found in config.json file');
     logger_1.logger.log('warning', 'No "accountDBName" key found in config.json file');
     throw "stop execution";
 }
 if (configContent.hasOwnProperty('password'))
     passwordDB = configContent.password;
 else {
-    //win.logger.log('WARNING', 'No "password" key found in config.json file');
     logger_1.logger.log('warning', 'No "password" key found in config.json file');
     throw "stop execution";
 }
 if (configContent.hasOwnProperty('databaseName'))
     nameDB = configContent.databaseName;
 else {
-    //win.logger.log('WARNING', 'No "databaseName" key found in config.json file');
     logger_1.logger.log('warning', 'No "databaseName" key found in config.json file');
     throw "stop execution";
 }
 if (configContent.hasOwnProperty('portCouch'))
     portDB = configContent.portCouch;
 else {
-    //win.logger.log('WARNING', 'No "portCouch" key found in config.json file');
     logger_1.logger.log('warning', 'No "portCouch" key found in config.json file');
     throw "stop execution";
 }
 if (configContent.hasOwnProperty('portExpress'))
     portExpress = configContent.portExpress;
 else {
-    //win.logger.log('WARNING', 'No "portExpress" key found in config.json file');
     logger_1.logger.log('warning', 'No "portExpress" key found in config.json file');
     throw "stop execution";
 }
 if (configContent.hasOwnProperty('portSocket'))
     portSocket = configContent.portSocket;
 else {
-    //win.logger.log('WARNING', 'No "portSocket" key found in config.json file');
     logger_1.logger.log('warning', 'No "portSocket" key found in config.json file');
     throw "stop execution";
 }
@@ -168,8 +183,22 @@ nano.db.destroy(nameDB, function (err) {
 * Starting listening on express port and socket port
 */
 emitter.on('created', () => {
-    if (index)
-        indexation(configContent.previousCacheDir);
+    if (dumpload) {
+        let file = jsonfile.readFileSync('./warehouse.json');
+        for (let elem of file.docs) {
+            delete elem["_id"];
+        }
+        storeJob(file.docs);
+        //loadDumping();
+    }
+    else {
+        if (index) {
+            indexation(configContent.previousCacheDir).on('indexDone', () => {
+                if (dump)
+                    dumpingDatabase();
+            });
+        }
+    }
     //starting express server
     server.startServerExpress(portExpress);
     //starting socket server + listeners
@@ -201,8 +230,92 @@ emitter.on('created', () => {
             packet.data(err);
             server.push('curlError', packet = packet);
         });
+    })
+        .on('indexRequest', (packet) => {
+        indexation(packet.data()).on('indexDone', () => {
+            logger_1.logger.log('info', 'Indexation succeed properly');
+            packet.data({});
+            server.push('indexSuccess', packet = packet);
+        })
+            .on('indexError', (err) => {
+            logger_1.logger.log('error', `Indexation failed \n ${err}`);
+            packet.data(err);
+            server.push('indexFailed', packet = packet);
+        });
     });
 });
+// function loadDumping(): void {
+// 	exec('cdbload -d warehouse < ./warehouse.json', (error, stdout, stderr) => {
+//   		if (error) {
+//     		console.error(`exec error: ${error}`);
+//     		return;
+//   		}
+//   		console.log(`stdout: ${stdout}`);
+//   		logger.log('success', `Loading dump file of ${nameDB}.json succeed`)
+//   		console.log(`stderr: ${stderr}`);
+// 	});
+// 	let chunkRes = '';
+// 	let chunkError = '';
+// 	try {
+// 		let curl = spawn('cdbload', ['-d', `${nameDB}`, '<', `./${nameDB}.json`])
+// 		curl.stdout.on('data', (data: any) => {
+// 			chunkRes += data.toString('utf8');
+// 		})
+// 		curl.stderr.on('data', (data: any) => {
+// 			chunkError += data.toString('utf8');
+// 		})
+// 		curl.on('close', (code: any) => {
+// 			let split: string[] = chunkError.replace(/(\r\n\t|\n|\r\t)/gm," ").split(" ")
+// 			let jsonChunkRes = JSON.parse(chunkRes);
+// 			console.log(chunkError)
+// 			if (chunkError.length > 0 && !split.includes('201') && !split.includes('Created')) {
+// 				logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
+// 			}
+// 			else{
+// 				logger.log('success', `Loading dump file of ${nameDB}.json succeed`);
+// 			}
+// 		})
+// 	}
+// 	catch(err){
+// 		logger.log('error', `Error while creating the curl command \n ${err}`)
+// 	}
+// 	// cdbload -d warehouse < warehouse.json
+// }
+/*
+* Function dumpingDatabase
+*/
+function dumpingDatabase() {
+    //let dumpEmitter: EventEmitter = new EventEmitter();
+    let chunkRes = '';
+    let chunkError = '';
+    let curl = child_process_1.spawn('cdbdump', ['-d', `${nameDB}`]);
+    curl.stdout.on('data', (data) => {
+        chunkRes += data.toString('utf8');
+    });
+    curl.stderr.on('data', (data) => {
+        chunkError += data.toString('utf8');
+    });
+    curl.on('close', (code) => {
+        let split = chunkError.replace(/(\r\n\t|\n|\r\t)/gm, " ").split(" ");
+        let jsonChunkRes = JSON.parse(chunkRes);
+        console.log(chunkError);
+        if (chunkError.length > 0 && !split.includes('200') && !split.includes('OK')) {
+            logger_1.logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
+            //dumpEmitter.emit('dumpError', chunkError);
+        }
+        else {
+            var file = `./${nameDB}.json`;
+            var fileContent = jsonChunkRes;
+            try {
+                jsonfile.writeFile(file, fileContent);
+                logger_1.logger.log('success', `Dumping of ${nameDB} database succeed`);
+            }
+            catch (err) {
+                logger_1.logger.log('error', `Dumping of ${nameDB} database failed \n ${err}`);
+            }
+        }
+    });
+}
 /*
 * function that manage the call to the constraintsToQuery function. This part is listening on three event
 * returned by the constraintsToQuery event: "docsFound", "noDocsFound" and "errorOnConstraints"
@@ -238,6 +351,7 @@ exports.constraintsCall = constraintsCall;
 * #pathResult : list of all jobID.json path found in all caches directory.
 */
 function indexation(cacheArray) {
+    let emitterIndex = new EventEmitter();
     let pathResult = globCaches(cacheArray);
     // TO DO: check is jobID.json is empty file, or if {}
     // Adding "_id" key to all jobID.json content from pathResult.
@@ -257,11 +371,13 @@ function indexation(cacheArray) {
     dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB)
         .then(() => {
         logger_1.logger.log('success', `Insertion of ${dataToCouch.length} jobID.json files in ${nameDB}`);
-        emitter.emit('indexDone');
+        emitterIndex.emit('indexDone');
     })
         .catch((err) => {
         console.log('catch');
+        emitterIndex.emit('indexError', err);
     });
+    return emitterIndex;
 }
 /*
 * Function that manage the indexing of an array of caches path directory

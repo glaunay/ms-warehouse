@@ -11,7 +11,7 @@ const jsonfile = require("jsonfile");
 const io = require("socket.io-client");
 const logger_1 = require("./lib/logger");
 let portSocket;
-let file = '../config.json';
+let file = './config.json';
 let config = jsonfile.readFileSync(file);
 portSocket = config.portSocket;
 let urlSocket = `http://localhost:${portSocket}`;
@@ -55,15 +55,32 @@ function storeJob(jobCompleted) {
         if (messageRes.type === 'errorAddjob')
             emitterStore.emit('addError', messageRes);
     });
+    return emitterStore;
 }
 exports.storeJob = storeJob;
+function indexationRequest(pathArray) {
+    let emitterIndexation = new EventEmitter();
+    let socketIndexation = io.connect(urlSocket);
+    let msg = messageBuilder(pathArray, 'indexation', false, true);
+    socketIndexation.on('connect', function () {
+        socketIndexation.emit('indexation', msg);
+    })
+        .on('indexationResponse', (messageIndex) => {
+        if (messageIndex.type === 'indexSuccess')
+            emitterIndexation.emit('indexOK');
+        if (messageIndex.type === 'indexFailed')
+            emitterIndexation.emit('indexError');
+    });
+    return emitterIndexation;
+}
+exports.indexationRequest = indexationRequest;
 /*
 * function messageBuilder create a message from constraints and event type
 * @constraints : constraints we want to be checked
 * @event : event type
 */
-function messageBuilder(data, event, store = false) {
-    let message = { 'type': store ? 'Store' : 'request',
+function messageBuilder(data, event, store = false, index = false) {
+    let message = { 'type': store ? 'store' : index ? 'indexation' : 'request',
         'value': event,
         'data': data
     };

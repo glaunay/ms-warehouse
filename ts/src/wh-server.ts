@@ -166,6 +166,10 @@ export let startServerSocket = function(port: number) : EventEmitter{
 			packet.data(msgStore.data);
 			emitterSocket.emit('jobToStore', packet);
 		})
+		.on('indexation', (msgIndex: types.msg) => {
+			packet.data(msgIndex.data);
+			emitterSocket.emit('indexRequest', packet);
+		})
 	})
 	return emitterSocket
 }
@@ -183,6 +187,7 @@ export function push(type: string, packet: packetManager){
 	// emit unique event once the constraints request is done from the couchDB. returning results to client
 	if(type === 'find' || type === 'notFind' || type === 'errorConstraints') packet.socket.emit('resultsConstraints', msg);
 	if(type === 'success' || type === 'errorAddJob' || type === 'curlError') packet.socket.emit('addingResponse', msg);
+	if(type === 'indexSuccess' || type === 'indexFailed') packet.socket.emit('indexationResponse', msg);
 }
 
 // function arraySplit(arrayToSplit: types.jobSerialInterface[]): types.jobSerialInterface[][]{

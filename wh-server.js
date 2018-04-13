@@ -145,6 +145,10 @@ exports.startServerSocket = function (port) {
             .on('storeJob', (msgStore) => {
             packet.data(msgStore.data);
             emitterSocket.emit('jobToStore', packet);
+        })
+            .on('indexation', (msgIndex) => {
+            packet.data(msgIndex.data);
+            emitterSocket.emit('indexRequest', packet);
         });
     });
     return emitterSocket;
@@ -163,6 +167,8 @@ function push(type, packet) {
         packet.socket.emit('resultsConstraints', msg);
     if (type === 'success' || type === 'errorAddJob' || type === 'curlError')
         packet.socket.emit('addingResponse', msg);
+    if (type === 'indexSuccess' || type === 'indexFailed')
+        packet.socket.emit('indexationResponse', msg);
 }
 exports.push = push;
 // function arraySplit(arrayToSplit: types.jobSerialInterface[]): types.jobSerialInterface[][]{

@@ -69,6 +69,7 @@
     "./ts/src/test/test-createExistingJob.ts",
     "./ts/src/test/test-fastRequestSocket.ts",
     "./ts/src/test/test-fastRequestExpress.ts",
+    "./ts/src/test/test-indexation-research.ts",
     "./ts/src/types/index.ts",
   ]
 }
