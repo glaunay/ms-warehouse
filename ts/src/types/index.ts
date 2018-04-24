@@ -21,6 +21,7 @@ export interface jobSerialInterface {
 	tagTask?: string,
 	scriptHash: string,
 	inputHash?: objMap
+	[key: string] : any
 }
 
 // Constraints interface

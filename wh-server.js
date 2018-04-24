@@ -122,7 +122,7 @@ exports.startServerExpress = function (port) {
     });
     // Listening express on port
     app.listen(port, () => {
-        logger_1.logger.log('info', `Running server on port ${port} for Express connections`);
+        logger_1.logger.log('info', `Running server on port ${port} for HTTP connections`);
     });
 };
 /*

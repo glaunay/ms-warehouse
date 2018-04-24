@@ -1,4 +1,17 @@
 "use strict";
+/*
+    Main file of the warehouse microservice.
+    This allow the user to add some job into a couchDB database.
+    Some options must be specified into the command line to run this microservice (see options parts).
+*/
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
@@ -7,25 +20,10 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-/*
-    Main file of the warehouse microservice.
-    This allow the user to add some job into a couchDB database.
-    Some options must be specified into the command line to run this microservice (see options parts).
-*/
-// (function() {
-//     var childProcess = require("child_process");
-//     var oldSpawn = childProcess.spawn;
-//     function mySpawn() {
-//         console.log('spawn called');
-//         console.log(arguments);
-//         var result = oldSpawn.apply(this, arguments);
-//         return result;
-//     }
-//     childProcess.spawn = mySpawn;
-// })();
 // Required packages
 const child_process_1 = require("child_process");
 const EventEmitter = require("events");
+const fs = require("fs");
 const glob = require("glob");
 const jsonfile = require("jsonfile");
 const nanoDB = require("nano");
@@ -35,6 +33,7 @@ const program = require("commander");
 const dbMod = __importStar(require("./lib/db-module"));
 const server = require("./wh-server");
 const types = __importStar(require("./types/index"));
+const tests = require("./test/tests-warehouse");
 //import win = require('./lib/logger');
 const logger_1 = require("./lib/logger");
 /*
@@ -66,7 +65,8 @@ program
     .option('-i, --index', 'Run indexation of cache directories')
     .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', logger_1.setLogLevel)
     .option('-d, --dump', 'Dump the database into json file after indexation')
-    .option('-l, --dumpload', 'Load dump from json file to construct the database')
+    .option('-l, --dumpload <path>', 'Load dump from json file to construct the database')
+    .option('-t, --test', 'Run tests of the warehouse')
     .parse(process.argv);
 logger_1.logger.log('info', "\t\t***** Starting public Warehouse MicroService *****\n");
 /*
@@ -159,7 +159,7 @@ let nano = nanoDB(url);
 /*
 * couchDB database creation part.
 * First, we check if a database with the name specified already exists. If yes,
-* this databse will be destroy before creating the new one (with the same name).
+* this database will be destroy before creating the new one (with the same name).
 */
 nano.db.destroy(nameDB, function (err) {
     if (err && err.statusCode != 404) {
@@ -175,117 +175,158 @@ nano.db.destroy(nameDB, function (err) {
         }
         //win.logger.log('SUCCESS', `database ${nameDB} created \n`);
         logger_1.logger.log('success', `Database ${nameDB} created \n`);
-        emitter.emit('created'); // emit the event 'created' when done
+        if (program.test) {
+            // calling tests from ./test/tests.warehouse.js
+            tests.startTests().on('allTestsDone', () => {
+                logger_1.logger.log('success', 'All tests succeed, starting the warehouse...\n');
+                // logger.log('info', `Deleting tests documents in ${nameDB}...`);
+                /* tests.deleteDocs().on('deleteDone', () => {
+                    emitter.emit('created');
+                })
+                .on('deleteFailed');
+                */
+                emitter.emit('created');
+            });
+        }
+        else {
+            emitter.emit('created');
+        }
     });
 });
+/*
+* function dumpLoadOption
+*/
+function dumpLoadOption() {
+    let p = new Promise((resolve, reject) => {
+        let file = jsonfile.readFileSync(program.dumpload);
+        let fileContent = [];
+        if (file.hasOwnProperty("docs") && file.docs instanceof Object && file) {
+            if (!Array.isArray(file.docs))
+                fileContent.push(file.docs);
+            else
+                fileContent = file.docs;
+        }
+        else if (Array.isArray(file))
+            fileContent = file;
+        else
+            logger_1.logger.log('warning', `dump from JSON file failed, not a JSON format, please refer to the documentation`);
+        if (fileContent.length > 0) {
+            logger_1.logger.log('info', `Starting load dump file of ${program.dumpload}...`);
+            storeJob(fileContent).on('storeDone', () => {
+                logger_1.logger.log('success', `Load dumping from ${program.dumpload} file to ${nameDB} database succeed\n`);
+                resolve();
+            })
+                .on('storeError', (err) => {
+                logger_1.logger.log('error', `Load dumping from ${program.dumpload} failed \n ${err}`);
+                reject();
+            });
+        }
+        else {
+            logger_1.logger.log('warning', `Empty file detected`);
+            reject();
+        }
+    });
+    return p;
+}
+function indexationOption() {
+    return new Promise((resolve, reject) => {
+        logger_1.logger.log('info', `Starting indexation...`);
+        indexation(configContent.previousCacheDir)
+            .on('indexDone', () => {
+            logger_1.logger.log('success', `Indexation done\n`);
+            resolve();
+        })
+            .on('indexError', (err) => {
+            logger_1.logger.log('error', `${err}`);
+            reject(err);
+        });
+    });
+}
+function dumpOption() {
+    return new Promise((resolve, reject) => {
+        dumpingDatabase()
+            .on('dumpDone', () => {
+            logger_1.logger.log('success', `Dumping of ${nameDB} succeed, ${nameDB}.json file created\n`);
+            resolve();
+        })
+            .on('dumpFailed', (err) => {
+            reject(err);
+        });
+    });
+}
+function runOptions() {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (dumpload)
+            yield dumpLoadOption();
+        //logger.log('info', 'dumpload done')
+        if (index)
+            yield indexationOption();
+        //logger.log('info', 'index done')
+        if (dump)
+            yield dumpOption();
+        //logger.log('info', 'dump done')
+        return true;
+    });
+}
 // Once the database created, and if the index option is specified, we start the indexation.
 /*
 * Starting listening on express port and socket port
 */
 emitter.on('created', () => {
-    if (dumpload) {
-        let file = jsonfile.readFileSync('./warehouse.json');
-        for (let elem of file.docs) {
-            delete elem["_id"];
-        }
-        storeJob(file.docs);
-        //loadDumping();
-    }
-    else {
-        if (index) {
-            indexation(configContent.previousCacheDir).on('indexDone', () => {
-                if (dump)
-                    dumpingDatabase();
+    runOptions().then(() => {
+        //starting express server
+        server.startServerExpress(portExpress);
+        //starting socket server + listeners
+        server.startServerSocket(portSocket).on('findBySocket', (packet) => {
+            constraintsCall(packet.data(), 'socket')
+                .on('socketSucceed', (docsArray) => {
+                packet.data(docsArray);
+                server.push('find', packet = packet);
+            })
+                .on('socketNoResults', (docsArray) => {
+                packet.data(docsArray);
+                server.push('notFind', packet = packet);
+            })
+                .on('socketFailed', (error) => {
+                packet.data(error);
+                server.push('errorConstraints', packet = packet);
             });
-        }
-    }
-    //starting express server
-    server.startServerExpress(portExpress);
-    //starting socket server + listeners
-    server.startServerSocket(portSocket).on('findBySocket', (packet) => {
-        constraintsCall(packet.data(), 'socket')
-            .on('socketSucceed', (docsArray) => {
-            packet.data(docsArray);
-            server.push('find', packet = packet);
         })
-            .on('socketNoResults', (docsArray) => {
-            packet.data(docsArray);
-            server.push('notFind', packet = packet);
+            .on('jobToStore', (packet) => {
+            storeJob(packet.data()).on('storeDone', () => {
+                packet.data({});
+                server.push('success', packet = packet);
+            })
+                .on('storError', (docsAddFailed) => {
+                packet.data(docsAddFailed);
+                server.push('errorAddJob', packet = packet);
+            })
+                .on('curlErr', (err) => {
+                packet.data(err);
+                server.push('curlError', packet = packet);
+            });
         })
-            .on('socketFailed', (error) => {
-            packet.data(error);
-            server.push('errorConstraints', packet = packet);
-        });
-    })
-        .on('jobToStore', (packet) => {
-        storeJob(packet.data()).on('storeDone', () => {
-            packet.data({});
-            server.push('success', packet = packet);
-        })
-            .on('storError', (docsAddFailed) => {
-            packet.data(docsAddFailed);
-            server.push('errorAddJob', packet = packet);
-        })
-            .on('curlErr', (err) => {
-            packet.data(err);
-            server.push('curlError', packet = packet);
-        });
-    })
-        .on('indexRequest', (packet) => {
-        indexation(packet.data()).on('indexDone', () => {
-            logger_1.logger.log('info', 'Indexation succeed properly');
-            packet.data({});
-            server.push('indexSuccess', packet = packet);
-        })
-            .on('indexError', (err) => {
-            logger_1.logger.log('error', `Indexation failed \n ${err}`);
-            packet.data(err);
-            server.push('indexFailed', packet = packet);
+            .on('indexRequest', (packet) => {
+            indexation(packet.data()).on('indexDone', () => {
+                logger_1.logger.log('info', 'Indexation succeed properly');
+                packet.data({});
+                server.push('indexSuccess', packet = packet);
+            })
+                .on('indexError', (err) => {
+                logger_1.logger.log('error', `Indexation failed \n ${err}`);
+                packet.data(err);
+                server.push('indexFailed', packet = packet);
+            });
         });
     });
 });
-// function loadDumping(): void {
-// 	exec('cdbload -d warehouse < ./warehouse.json', (error, stdout, stderr) => {
-//   		if (error) {
-//     		console.error(`exec error: ${error}`);
-//     		return;
-//   		}
-//   		console.log(`stdout: ${stdout}`);
-//   		logger.log('success', `Loading dump file of ${nameDB}.json succeed`)
-//   		console.log(`stderr: ${stderr}`);
-// 	});
-// 	let chunkRes = '';
-// 	let chunkError = '';
-// 	try {
-// 		let curl = spawn('cdbload', ['-d', `${nameDB}`, '<', `./${nameDB}.json`])
-// 		curl.stdout.on('data', (data: any) => {
-// 			chunkRes += data.toString('utf8');
-// 		})
-// 		curl.stderr.on('data', (data: any) => {
-// 			chunkError += data.toString('utf8');
-// 		})
-// 		curl.on('close', (code: any) => {
-// 			let split: string[] = chunkError.replace(/(\r\n\t|\n|\r\t)/gm," ").split(" ")
-// 			let jsonChunkRes = JSON.parse(chunkRes);
-// 			console.log(chunkError)
-// 			if (chunkError.length > 0 && !split.includes('201') && !split.includes('Created')) {
-// 				logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
-// 			}
-// 			else{
-// 				logger.log('success', `Loading dump file of ${nameDB}.json succeed`);
-// 			}
-// 		})
-// 	}
-// 	catch(err){
-// 		logger.log('error', `Error while creating the curl command \n ${err}`)
-// 	}
-// 	// cdbload -d warehouse < warehouse.json
-// }
 /*
 * Function dumpingDatabase
 */
 function dumpingDatabase() {
-    //let dumpEmitter: EventEmitter = new EventEmitter();
+    let dumpEmitter = new EventEmitter();
+    //let counter = 0
+    let wstream = fs.createWriteStream(`${nameDB}.json`);
     let chunkRes = '';
     let chunkError = '';
     let curl = child_process_1.spawn('cdbdump', ['-d', `${nameDB}`]);
@@ -297,25 +338,27 @@ function dumpingDatabase() {
     });
     curl.on('close', (code) => {
         let split = chunkError.replace(/(\r\n\t|\n|\r\t)/gm, " ").split(" ");
-        let jsonChunkRes = JSON.parse(chunkRes);
-        console.log(chunkError);
+        //let jsonChunkRes = JSON.parse(chunkRes);
         if (chunkError.length > 0 && !split.includes('200') && !split.includes('OK')) {
             logger_1.logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
             //dumpEmitter.emit('dumpError', chunkError);
         }
         else {
             var file = `./${nameDB}.json`;
-            var fileContent = jsonChunkRes;
             try {
-                jsonfile.writeFile(file, fileContent);
-                logger_1.logger.log('success', `Dumping of ${nameDB} database succeed`);
+                wstream.write(chunkRes);
+                logger_1.logger.log('success', `Dumping of ${nameDB} database succeed, ${nameDB}.json file created`);
+                dumpEmitter.emit('dumpDone');
             }
             catch (err) {
                 logger_1.logger.log('error', `Dumping of ${nameDB} database failed \n ${err}`);
+                dumpEmitter.emit('dumpFailed', err);
             }
         }
     });
+    return dumpEmitter;
 }
+exports.dumpingDatabase = dumpingDatabase;
 /*
 * function that manage the call to the constraintsToQuery function. This part is listening on three event
 * returned by the constraintsToQuery event: "docsFound", "noDocsFound" and "errorOnConstraints"
@@ -363,22 +406,25 @@ function indexation(cacheArray) {
     }
     //let dataToCouch: types.jobID[] = pathResult.filter((elem) => extractDoc(elem, directorySearch(elem)));
     //let dataToCouch: types.jobID[] = dataToFilter.filter(function(n) { return n != undefined; });
-    logger_1.logger.log('debug', `number of jobID.json content in list ${dataToCouch.length} \n ${JSON.stringify(dataToCouch)}`);
+    if (program.test)
+        logger_1.logger.log('success', '----> OK');
+    logger_1.logger.log('info', `Number of jobID.json files found in directories: ${dataToCouch.length}`);
+    logger_1.logger.log('debug', `${JSON.stringify(dataToCouch)}`);
     // TO DO add logger size too big
     // dbMod.addToDB(dataToCouch,nameDB, accountDB, passwordDB).on('addSucceed', () => {
     // 	emitter.emit('indexDone');
     // })
     dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB)
         .then(() => {
-        logger_1.logger.log('success', `Insertion of ${dataToCouch.length} jobID.json files in ${nameDB}`);
+        logger_1.logger.log('success', `Insertion of ${dataToCouch.length} jobID.json file(s) in ${nameDB}`);
         emitterIndex.emit('indexDone');
     })
         .catch((err) => {
-        console.log('catch');
         emitterIndex.emit('indexError', err);
     });
     return emitterIndex;
 }
+exports.indexation = indexation;
 /*
 * Function that manage the indexing of an array of caches path directory
 * @pathsArray: array of strings which contain cache directory paths.
@@ -401,7 +447,7 @@ function globCaches(pathsArray) {
     // finding pattern of jobID.json inside cache path
     for (let element in pathsArray) {
         deepIndex.push(glob.sync(pathsArray[element] + "/**/jobID\.json", { follow: true }));
-        logger_1.logger.log('info', `${deepIndex[element].length} jobID.json file(s) found in directory ${pathsArray[element]}`);
+        logger_1.logger.log('debug', `${deepIndex[element].length} jobID.json file(s) found in directory ${pathsArray[element]}`);
     }
     // merged array of array into simple array of all path that contain a jobID.json file
     mergedIndex = [].concat.apply([], deepIndex);
@@ -521,7 +567,6 @@ function storeJob(job) {
     let storeEmitter = new EventEmitter();
     dbMod.addToDB(job, nameDB, accountDB, passwordDB)
         .then(() => {
-        console.log('then');
         if (Array.isArray(job)) {
             logger_1.logger.log('success', `Insertion of ${job.length} jobID.json files in ${nameDB}`);
         }
@@ -530,9 +575,7 @@ function storeJob(job) {
         storeEmitter.emit('storeDone');
     })
         .catch((err) => {
-        console.log('catch');
-        console.log(err);
-        storeEmitter.emit('storeError');
+        storeEmitter.emit('storeError', err);
     });
     return storeEmitter;
 }

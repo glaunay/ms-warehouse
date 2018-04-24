@@ -5,16 +5,17 @@
 */
 
 // Required packages
-import program = require('commander');
+//import program = require('commander');
 // Required modules
+
 import client = require('../wh-client')
 import * as types from '../types/index';
 import {logger, setLogLevel} from '../lib/logger';
 
 // Commander package part
-program
-  .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', setLogLevel)
-  .parse(process.argv);
+// program
+//   .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', setLogLevel)
+//   .parse(process.argv);
 
 // constraints for testing
 let constraints: types.jobSerialConstraints = {
@@ -39,7 +40,6 @@ let jobID_Test: types.jobSerialInterface = {
 	}
 }
 
-
 /*
 * function createJobByExpress that will check if job already exist inside the coiuchDB database before creating it.
 * @constraints : constraints we want to check
@@ -56,7 +56,6 @@ function createJobBySocket(constraints: types.jobSerialConstraints){
 function onJobComp(data: types.jobSerialInterface) {
 	client.storeJob(jobID_Test);
 }
-
 
 createJobBySocket(constraints);
 onJobComp(jobID_Test);

@@ -8,7 +8,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // Required packages
 //import program = require('commander');
 // Required modules
-const client = require("../wh-client");
+const client = require("./wh-client");
 // Commander package part
 // program
 //   .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', setLogLevel)

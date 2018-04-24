@@ -140,7 +140,7 @@ export let startServerExpress = function(port: number) : void{
 	})
 	// Listening express on port
 	app.listen(port, () => {
-		logger.log('info', `Running server on port ${port} for Express connections`)
+		logger.log('info', `Running server on port ${port} for HTTP connections`)
 	});
 }
 

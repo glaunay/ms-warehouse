@@ -6,14 +6,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 */
 // Required packages
 const EventEmitter = require("events");
-//import fs = require('fs');
-const jsonfile = require("jsonfile");
+const config = require('./config.json');
 const io = require("socket.io-client");
 const logger_1 = require("./lib/logger");
-let portSocket;
-let file = './config.json';
-let config = jsonfile.readFileSync(file);
-portSocket = config.portSocket;
+let portSocket = config.portSocket;
 let urlSocket = `http://localhost:${portSocket}`;
 /*
 * function push that send a message inside the socket connection to the warehouse server

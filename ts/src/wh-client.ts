@@ -4,23 +4,15 @@
 */
 // Required packages
 import EventEmitter = require('events');
-//import fs = require('fs');
 import jsonfile = require('jsonfile');
+const config = require('./config.json')
 import io = require('socket.io-client');
 // Required modules
 import * as types from './types/index';
 import {logger, setLogLevel} from './lib/logger';
 
-let portSocket: number;
-
-let file = './config.json'
-let config = jsonfile.readFileSync(file)
-
-portSocket = config.portSocket
-
+let portSocket = config.portSocket
 let urlSocket: string = `http://localhost:${portSocket}`
-
-
 
 /*
 * function push that send a message inside the socket connection to the warehouse server

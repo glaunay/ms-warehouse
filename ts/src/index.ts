@@ -3,17 +3,7 @@
 	This allow the user to add some job into a couchDB database.
 	Some options must be specified into the command line to run this microservice (see options parts). 
 */
-// (function() {
-//     var childProcess = require("child_process");
-//     var oldSpawn = childProcess.spawn;
-//     function mySpawn() {
-//         console.log('spawn called');
-//         console.log(arguments);
-//         var result = oldSpawn.apply(this, arguments);
-//         return result;
-//     }
-//     childProcess.spawn = mySpawn;
-// })();
+
 // Required packages
 import { spawn, exec } from 'child_process';
 import deepEqual = require('deep-equal');
@@ -29,8 +19,11 @@ import program = require('commander');
 import * as dbMod from './lib/db-module';
 import server = require('./wh-server');
 import * as types from './types/index';
+import tests = require('./test/tests-warehouse')
 //import win = require('./lib/logger');
 import {logger, setLogLevel} from './lib/logger';
+
+import loadJsonFile = require('load-json-file');
 
 /*
 * Variable initialisation.
@@ -61,7 +54,8 @@ program
   .option('-i, --index', 'Run indexation of cache directories')
   .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', setLogLevel)
   .option('-d, --dump', 'Dump the database into json file after indexation')
-  .option('-l, --dumpload', 'Load dump from json file to construct the database')
+  .option('-l, --dumpload <path>', 'Load dump from json file to construct the database')
+  .option('-t, --test', 'Run tests of the warehouse')
   //.option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)')
   //.option('-s, --socket <port>', 'Specified the socket port')
   //.option('-x, --express <port>', 'Specified the express port')
@@ -163,7 +157,7 @@ let nano = nanoDB(url)
 /*
 * couchDB database creation part. 
 * First, we check if a database with the name specified already exists. If yes,
-* this databse will be destroy before creating the new one (with the same name).
+* this database will be destroy before creating the new one (with the same name).
 */
 nano.db.destroy(nameDB, function(err: any) {
 	if (err && err.statusCode != 404){
@@ -180,130 +174,164 @@ nano.db.destroy(nameDB, function(err: any) {
 		}
 		//win.logger.log('SUCCESS', `database ${nameDB} created \n`);
 		logger.log('success', `Database ${nameDB} created \n`)
-		emitter.emit('created'); 	// emit the event 'created' when done
+		if(program.test){
+			// calling tests from ./test/tests.warehouse.js
+			tests.startTests().on('allTestsDone', () => {
+				logger.log('success', 'All tests succeed, starting the warehouse...\n');
+				// logger.log('info', `Deleting tests documents in ${nameDB}...`);
+				/* tests.deleteDocs().on('deleteDone', () => {
+					emitter.emit('created');
+				})
+				.on('deleteFailed');
+				*/
+				emitter.emit('created');
+			});
+		}
+		else {
+			emitter.emit('created');
+		}	
 	})
 })
+
+/*
+* function dumpLoadOption
+*/
+function dumpLoadOption(): Promise<{}>{
+	let p: Promise<any> = new Promise((resolve, reject)=> {
+		let file = jsonfile.readFileSync(program.dumpload);	
+		let fileContent: types.jobSerialInterface[] = [];
+		
+		if (file.hasOwnProperty("docs") && file.docs instanceof Object && file) {
+			if (!Array.isArray(file.docs)) fileContent.push(file.docs);
+			else fileContent = file.docs;
+		}	
+		else if (Array.isArray(file)) fileContent = file;
+		else logger.log('warning', `dump from JSON file failed, not a JSON format, please refer to the documentation`);
+
+		if (fileContent.length > 0){
+			logger.log('info', `Starting load dump file of ${program.dumpload}...`);
+		
+			storeJob(fileContent).on('storeDone', () => {
+				logger.log('success', `Load dumping from ${program.dumpload} file to ${nameDB} database succeed\n`);
+				resolve();
+			})
+			.on('storeError', (err) => {
+				logger.log('error', `Load dumping from ${program.dumpload} failed \n ${err}`);
+				reject();
+			})		
+		}
+		else {
+			logger.log('warning', `Empty file detected`);
+			reject();
+		}
+	})
+	return p;
+}
+
+
+function indexationOption(): Promise<{}>{
+	return new Promise((resolve, reject)=>{
+		logger.log('info', `Starting indexation...`);
+		indexation(configContent.previousCacheDir)
+		.on('indexDone', () => {
+			logger.log('success',`Indexation done\n`);
+			resolve();
+		})
+		.on('indexError', (err) => {
+			logger.log('error',`${err}`);
+			reject(err);
+		})
+	});
+}
+
+function dumpOption() : Promise<{}>{
+	return new Promise((resolve, reject)=>{
+		dumpingDatabase()
+		.on('dumpDone', () => {
+			logger.log('success', `Dumping of ${nameDB} succeed, ${nameDB}.json file created\n`);
+			resolve();
+		})
+		.on('dumpFailed', (err) => {
+			reject(err);
+		})
+	});
+}
+
+async function runOptions(): Promise<{}> {
+	if (dumpload) await dumpLoadOption();
+	//logger.log('info', 'dumpload done')
+	if (index) await indexationOption();
+	//logger.log('info', 'index done')
+	if (dump) await dumpOption();
+	//logger.log('info', 'dump done')
+
+	return true;
+}
 
 // Once the database created, and if the index option is specified, we start the indexation.
 /*
 * Starting listening on express port and socket port
 */
 emitter.on('created', () => {
-	if(dumpload){
-		let file = jsonfile.readFileSync('./warehouse.json');
-		for(let elem of file.docs){
-			delete elem["_id"]
-		}
-		storeJob(file.docs)
-		//loadDumping();
-	}
-	else{
-		if (index) {
-			indexation(configContent.previousCacheDir).on('indexDone', () => {
-				if (dump) dumpingDatabase();
-			});
-		}
-	}
 
-	//starting express server
-	server.startServerExpress(portExpress);
-	//starting socket server + listeners
-	server.startServerSocket(portSocket).on('findBySocket', (packet: any) => {
-		constraintsCall(packet.data(), 'socket')
-		.on('socketSucceed', (docsArray: types.objMap[]) => {
-			packet.data(docsArray);
-			server.push('find', packet = packet);
+	runOptions().then(() => {
+		//starting express server
+		server.startServerExpress(portExpress);
+		//starting socket server + listeners
+		server.startServerSocket(portSocket).on('findBySocket', (packet: any) => {
+			constraintsCall(packet.data(), 'socket')
+			.on('socketSucceed', (docsArray: types.objMap[]) => {
+				packet.data(docsArray);
+				server.push('find', packet = packet);
+			})
+			.on('socketNoResults', (docsArray: types.objMap[]) => {
+				packet.data(docsArray);
+				server.push('notFind', packet = packet);
+			})
+			.on('socketFailed', (error) => {
+				packet.data(error);
+				server.push('errorConstraints', packet = packet);
+			})
 		})
-		.on('socketNoResults', (docsArray: types.objMap[]) => {
-			packet.data(docsArray);
-			server.push('notFind', packet = packet);
+		.on('jobToStore', (packet: any) =>{
+			storeJob(packet.data()).on('storeDone', () => {
+				packet.data({});
+				server.push('success', packet = packet);
+			})
+			.on('storError', (docsAddFailed) => {
+				packet.data(docsAddFailed);
+				server.push('errorAddJob', packet = packet);
+			})
+			.on('curlErr', (err) => {
+				packet.data(err);
+				server.push('curlError', packet = packet);
+			})
 		})
-		.on('socketFailed', (error) => {
-			packet.data(error);
-			server.push('errorConstraints', packet = packet);
-		})
-	})
-	.on('jobToStore', (packet: any) =>{
-		storeJob(packet.data()).on('storeDone', () => {
-			packet.data({});
-			server.push('success', packet = packet);
-		})
-		.on('storError', (docsAddFailed) => {
-			packet.data(docsAddFailed);
-			server.push('errorAddJob', packet = packet);
-		})
-		.on('curlErr', (err) => {
-			packet.data(err);
-			server.push('curlError', packet = packet);
-		})
-	})
-	.on('indexRequest', (packet: any) => {
-		indexation(packet.data()).on('indexDone', () => {
-			logger.log('info', 'Indexation succeed properly');
-			packet.data({});
-			server.push('indexSuccess', packet = packet);
-		})
-		.on('indexError', (err) => {
-			logger.log('error', `Indexation failed \n ${err}`);
-			packet.data(err);
-			server.push('indexFailed', packet = packet);
+		.on('indexRequest', (packet: any) => {
+			indexation(packet.data()).on('indexDone', () => {
+				logger.log('info', 'Indexation succeed properly');
+				packet.data({});
+				server.push('indexSuccess', packet = packet);
+			})
+			.on('indexError', (err) => {
+				logger.log('error', `Indexation failed \n ${err}`);
+				packet.data(err);
+				server.push('indexFailed', packet = packet);
+			})
 		})
 	})
 })
 
-// function loadDumping(): void {
-
-// 	exec('cdbload -d warehouse < ./warehouse.json', (error, stdout, stderr) => {
-//   		if (error) {
-  			
-//     		console.error(`exec error: ${error}`);
-//     		return;
-//   		}
-//   		console.log(`stdout: ${stdout}`);
-//   		logger.log('success', `Loading dump file of ${nameDB}.json succeed`)
-//   		console.log(`stderr: ${stderr}`);
-// 	});
-
-// 	let chunkRes = '';
-// 	let chunkError = '';
-// 	try {
-// 		let curl = spawn('cdbload', ['-d', `${nameDB}`, '<', `./${nameDB}.json`])
-// 		curl.stdout.on('data', (data: any) => {
-// 			chunkRes += data.toString('utf8');
-// 		})
-
-// 		curl.stderr.on('data', (data: any) => {
-// 			chunkError += data.toString('utf8');
-// 		})
-
-// 		curl.on('close', (code: any) => {
-
-// 			let split: string[] = chunkError.replace(/(\r\n\t|\n|\r\t)/gm," ").split(" ")
-// 			let jsonChunkRes = JSON.parse(chunkRes);
-// 			console.log(chunkError)
-// 			if (chunkError.length > 0 && !split.includes('201') && !split.includes('Created')) {
-// 				logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
-			
-// 			}
-// 			else{
-// 				logger.log('success', `Loading dump file of ${nameDB}.json succeed`);
-// 			}
-// 		})
-// 	}
-// 	catch(err){
-// 		logger.log('error', `Error while creating the curl command \n ${err}`)
-// 	}
-	
-// 	// cdbload -d warehouse < warehouse.json
-// }
-
-/*
+/* 
 * Function dumpingDatabase 
 */
-function dumpingDatabase(): void{
-	//let dumpEmitter: EventEmitter = new EventEmitter();
+export function dumpingDatabase(): EventEmitter{
+	let dumpEmitter: EventEmitter = new EventEmitter();
+	//let counter = 0
+	let wstream = fs.createWriteStream(`${nameDB}.json`)
 	let chunkRes = '';
 	let chunkError = '';
+
 	let curl = spawn('cdbdump', ['-d', `${nameDB}`]);
 
 	curl.stdout.on('data', (data: any) => {
@@ -316,24 +344,27 @@ function dumpingDatabase(): void{
 
 	curl.on('close', (code: any) => {
 		let split: string[] = chunkError.replace(/(\r\n\t|\n|\r\t)/gm," ").split(" ")
-		let jsonChunkRes = JSON.parse(chunkRes);
-		console.log(chunkError)
+
+		//let jsonChunkRes = JSON.parse(chunkRes);
+
 		if (chunkError.length > 0 && !split.includes('200') && !split.includes('OK')) {
 			logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
 			//dumpEmitter.emit('dumpError', chunkError);
 		}
 		else{
 			var file = `./${nameDB}.json`
-			var fileContent = jsonChunkRes;
  			try {
- 				jsonfile.writeFile(file, fileContent);
- 				logger.log('success', `Dumping of ${nameDB} database succeed`);
+ 				wstream.write(chunkRes)
+ 				logger.log('success', `Dumping of ${nameDB} database succeed, ${nameDB}.json file created`);
+ 				dumpEmitter.emit('dumpDone');
  			}
  			catch(err){
- 				logger.log('error', `Dumping of ${nameDB} database failed \n ${err}`)
+ 				logger.log('error', `Dumping of ${nameDB} database failed \n ${err}`);
+ 				dumpEmitter.emit('dumpFailed', err);
  			}
 		}
 	})
+	return dumpEmitter;
 }
 
 /*
@@ -374,7 +405,7 @@ export function constraintsCall(constraints: types.jobSerialConstraints, connect
 * #dataToCouch : array that will contain all jobID.json file that attempt to be add inside the couchDB database.
 * #pathResult : list of all jobID.json path found in all caches directory.
 */
-function indexation(cacheArray: string[]) : EventEmitter {
+export function indexation(cacheArray: string[]) : EventEmitter {
 
 	let emitterIndex: EventEmitter = new EventEmitter(); 
 	let pathResult: string[] = globCaches(cacheArray);
@@ -389,19 +420,19 @@ function indexation(cacheArray: string[]) : EventEmitter {
 	}
 	//let dataToCouch: types.jobID[] = pathResult.filter((elem) => extractDoc(elem, directorySearch(elem)));
 	//let dataToCouch: types.jobID[] = dataToFilter.filter(function(n) { return n != undefined; });
-
-	logger.log('debug', `number of jobID.json content in list ${dataToCouch.length} \n ${JSON.stringify(dataToCouch)}`);
+	if(program.test) logger.log('success', '----> OK');
+	logger.log('info', `Number of jobID.json files found in directories: ${dataToCouch.length}`);
+	logger.log('debug', `${JSON.stringify(dataToCouch)}`)
 	// TO DO add logger size too big
 	// dbMod.addToDB(dataToCouch,nameDB, accountDB, passwordDB).on('addSucceed', () => {
 	// 	emitter.emit('indexDone');
 	// })
 	dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB)
 		.then(() => {
-			logger.log('success', `Insertion of ${dataToCouch.length} jobID.json files in ${nameDB}`);
+			logger.log('success', `Insertion of ${dataToCouch.length} jobID.json file(s) in ${nameDB}`);
 			emitterIndex.emit('indexDone');
 		})
 		.catch((err) => {
-			console.log('catch');
 			emitterIndex.emit('indexError', err);
 		})
 	
@@ -434,7 +465,7 @@ function globCaches(pathsArray: string[]) : string[]{
 	// finding pattern of jobID.json inside cache path
 	for (let element in pathsArray){
 		deepIndex.push(glob.sync(pathsArray[element] + "/**/jobID\.json", {follow : true}));
-		logger.log('info', `${deepIndex[element].length} jobID.json file(s) found in directory ${pathsArray[element]}`);
+		logger.log('debug', `${deepIndex[element].length} jobID.json file(s) found in directory ${pathsArray[element]}`);
 	}
 
 	// merged array of array into simple array of all path that contain a jobID.json file
@@ -573,11 +604,9 @@ function constraintsToQuery(constraints: types.jobSerialConstraints, either: boo
 * @job : job that will store into the couchDB database.
 */
 export function storeJob(job: types.jobSerialInterface | types.jobSerialInterface[]): EventEmitter {
-
 	let storeEmitter: EventEmitter = new EventEmitter();
 	dbMod.addToDB(job, nameDB, accountDB, passwordDB)
 		.then(() => {
-			console.log('then')
 			if (Array.isArray(job)){
 				logger.log('success', `Insertion of ${job.length} jobID.json files in ${nameDB}`);
 			}
@@ -585,9 +614,7 @@ export function storeJob(job: types.jobSerialInterface | types.jobSerialInterfac
 			storeEmitter.emit('storeDone');
 		})
 		.catch((err) => {
-			console.log('catch')
-			console.log(err)
-			storeEmitter.emit('storeError')
+			storeEmitter.emit('storeError', err)
 		})
 	return storeEmitter;
 }
@@ -604,10 +631,6 @@ emitter.on('indexDone', () => {
 .on('callCurlErr', (err) => {
 	logger.log('error', `curl command failed: \n ${err}`);
 })
-
-
-
-
 
 
 
