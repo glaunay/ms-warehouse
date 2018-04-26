@@ -59,3 +59,7 @@ typings/
 
 # mac file
 .DS_Store
+/test/.DS_Store
+/lib/.DS_Store
+/types/.DS_Store
+/ts/.DS_Store

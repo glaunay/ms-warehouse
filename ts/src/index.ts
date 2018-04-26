@@ -11,6 +11,7 @@ import EventEmitter = require('events');
 import fs = require('fs');
 import glob = require('glob');
 import jsonfile = require('jsonfile');
+import lineReader = require("line-by-line");
 import nanoDB = require('nano');
 import splitArray = require('split-array');
 //let nanoDB = require('nano')({requestDefaults:{pool:{maxSockets: Infinity}}})
@@ -41,7 +42,7 @@ let emitter: EventEmitter = new EventEmitter();
 let nameDB: string = "warehouse"; // default value
 let accountDB: string = "";
 let passwordDB: string = "";
-let addressDB: string = "localhost";
+let addressDB: string = "";
 let portExpress: number;
 let portSocket: number;
 let portDB: number; // default port for couchDB
@@ -54,7 +55,7 @@ program
   .option('-i, --index', 'Run indexation of cache directories')
   .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', setLogLevel)
   .option('-d, --dump', 'Dump the database into json file after indexation')
-  .option('-l, --dumpload <path>', 'Load dump from json file to construct the database')
+  .option('-l, --dumpload <path>', 'Load dump file from json file to construct the database')
   .option('-t, --test', 'Run tests of the warehouse')
   //.option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)')
   //.option('-s, --socket <port>', 'Specified the socket port')
@@ -134,6 +135,12 @@ else{
 	throw "stop execution";
 }
 
+if (configContent.hasOwnProperty('databaseAddress')) addressDB = configContent.databaseAddress;
+else{
+	logger.log('warning','No "databaseAddress" key found in config.json file')
+	throw "stop execution";
+}
+
 if (configContent.hasOwnProperty('portCouch')) portDB = configContent.portCouch;
 else {
 	logger.log('warning','No "portCouch" key found in config.json file')
@@ -177,14 +184,15 @@ nano.db.destroy(nameDB, function(err: any) {
 		if(program.test){
 			// calling tests from ./test/tests.warehouse.js
 			tests.startTests().on('allTestsDone', () => {
-				logger.log('success', 'All tests succeed, starting the warehouse...\n');
-				// logger.log('info', `Deleting tests documents in ${nameDB}...`);
-				/* tests.deleteDocs().on('deleteDone', () => {
+				logger.log('info', `Deleting tests documents in ${nameDB}...`);
+				tests.cleanDB(addressDB, portDB, nameDB).on('deleteDone', () => {
+					logger.log('success', `Deleting tests documents in ${nameDB} database succeed\n\n`);
+					logger.log('success', 'All tests succeed, starting the warehouse...\n');
 					emitter.emit('created');
 				})
-				.on('deleteFailed');
-				*/
-				emitter.emit('created');
+				//.on('deleteFailed');
+				
+				//emitter.emit('created');
 			});
 		}
 		else {
@@ -194,13 +202,15 @@ nano.db.destroy(nameDB, function(err: any) {
 })
 
 /*
-* function dumpLoadOption
+* function dumpLoadOption that return a Promise object. This function will be called
+* if the "-l" option given in command line. Reading the json file, and doing some
+* checks. When done, simply calling storeJob function to add the json file content.
 */
 function dumpLoadOption(): Promise<{}>{
 	let p: Promise<any> = new Promise((resolve, reject)=> {
-		let file = jsonfile.readFileSync(program.dumpload);	
+		//let lr = new lineReader(program.dumpLoad);
+		let file = jsonfile.readFileSync(program.dumpload);
 		let fileContent: types.jobSerialInterface[] = [];
-		
 		if (file.hasOwnProperty("docs") && file.docs instanceof Object && file) {
 			if (!Array.isArray(file.docs)) fileContent.push(file.docs);
 			else fileContent = file.docs;
@@ -210,7 +220,7 @@ function dumpLoadOption(): Promise<{}>{
 
 		if (fileContent.length > 0){
 			logger.log('info', `Starting load dump file of ${program.dumpload}...`);
-		
+
 			storeJob(fileContent).on('storeDone', () => {
 				logger.log('success', `Load dumping from ${program.dumpload} file to ${nameDB} database succeed\n`);
 				resolve();
@@ -218,7 +228,7 @@ function dumpLoadOption(): Promise<{}>{
 			.on('storeError', (err) => {
 				logger.log('error', `Load dumping from ${program.dumpload} failed \n ${err}`);
 				reject();
-			})		
+			})	
 		}
 		else {
 			logger.log('warning', `Empty file detected`);
@@ -228,7 +238,55 @@ function dumpLoadOption(): Promise<{}>{
 	return p;
 }
 
+// function dumpLoadOption(){
+// 	let p = new Promise((resolve, reject)=> {
+// 		let lr: any = new lineReader('../bigJson.json');
+// 		let dataArray: types.jobSerialInterface[] = [];
 
+// 		lr.on('error', function (err: any) {
+// 			reject();
+// 		});
+// 		lr.on('line', function (line: any) {
+// 			lr.pause();
+// 			line = line.slice(0, -1);
+
+// 			if(line === '{"docs":'){
+// 				lr.resume();
+// 			}
+// 			else{
+// 				let obj: types.jobSerialInterface = JSON.parse(line);
+// 				dataArray.push(obj);
+// 				console.log(dataArray)
+
+// 				if(dataArray.length > 500){
+// 					logger.log('info', `Starting load dump file of ${program.dumpload}...`);
+
+// 					storeJob(dataArray).on('storeDone', () => {
+// 						logger.log('success', `Load dumping from ${program.dumpload} file to ${nameDB} database succeed\n`);
+// 						dataArray = [];
+// 						lr.resume();
+// 					})
+// 					.on('storeError', (err) => {
+// 						logger.log('error', `Load dumping from ${program.dumpload} failed \n ${err}`);
+// 					})	
+// 				}
+// 				else{				
+// 					lr.resume();
+// 				}
+// 			}
+// 		})
+// 		lr.on('end', function () {
+// 			resolve();
+// 		});
+// 	})
+// 	return p;
+// }
+
+/*
+* function indexationOption that return a Promise object. This function will be called
+* if the "-i" option given in command line. Starting the indexation of the 
+* cache dir path given is ./config.json file.
+*/
 function indexationOption(): Promise<{}>{
 	return new Promise((resolve, reject)=>{
 		logger.log('info', `Starting indexation...`);
@@ -244,6 +302,11 @@ function indexationOption(): Promise<{}>{
 	});
 }
 
+/*
+* function dumpOption that return a Promise object. This function will be called
+* if the "-d" option given i command line. Dumping the database into a json file
+* with the name of the database created.
+*/
 function dumpOption() : Promise<{}>{
 	return new Promise((resolve, reject)=>{
 		dumpingDatabase()
@@ -257,14 +320,16 @@ function dumpOption() : Promise<{}>{
 	});
 }
 
+/*
+* function runOptions is an option manager. This is an asynchronous function,
+* using async/await pattern. That means we wait the end of an await command before 
+* starting the next instructions. This function return also a Promise object, but its implicit.
+* Once all await instructions finished, the function implicit execute a "resolve()".
+*/
 async function runOptions(): Promise<{}> {
 	if (dumpload) await dumpLoadOption();
-	//logger.log('info', 'dumpload done')
 	if (index) await indexationOption();
-	//logger.log('info', 'index done')
 	if (dump) await dumpOption();
-	//logger.log('info', 'dump done')
-
 	return true;
 }
 
@@ -273,7 +338,8 @@ async function runOptions(): Promise<{}> {
 * Starting listening on express port and socket port
 */
 emitter.on('created', () => {
-
+	// Sarting runOptions function, waiting for the Promise result.
+	// If resolved, starting warehouse server.
 	runOptions().then(() => {
 		//starting express server
 		server.startServerExpress(portExpress);
@@ -319,6 +385,11 @@ emitter.on('created', () => {
 				server.push('indexFailed', packet = packet);
 			})
 		})
+	})
+	.catch((err) => {
+		logger.log('error', `An error occured:`);
+
+		throw err;
 	})
 })
 

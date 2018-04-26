@@ -12,7 +12,8 @@ import * as types from './types/index';
 import {logger, setLogLevel} from './lib/logger';
 
 let portSocket = config.portSocket
-let urlSocket: string = `http://localhost:${portSocket}`
+let addressDB = config.databaseAddress
+let urlSocket: string = `http://${addressDB}:${portSocket}`
 
 /*
 * function push that send a message inside the socket connection to the warehouse server

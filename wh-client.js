@@ -10,7 +10,8 @@ const config = require('./config.json');
 const io = require("socket.io-client");
 const logger_1 = require("./lib/logger");
 let portSocket = config.portSocket;
-let urlSocket = `http://localhost:${portSocket}`;
+let addressDB = config.databaseAddress;
+let urlSocket = `http://${addressDB}:${portSocket}`;
 /*
 * function push that send a message inside the socket connection to the warehouse server
 * @constraints : constraints send to the warehouse for checking.

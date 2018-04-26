@@ -120,6 +120,10 @@ exports.startServerExpress = function (port) {
         // 	res.send(msgExpress);
         // })
     });
+    app.get('/test', (req, res) => {
+        logger_1.logger.log('info', 'HTTP test');
+        res.send('toto');
+    });
     // Listening express on port
     app.listen(port, () => {
         logger_1.logger.log('info', `Running server on port ${port} for HTTP connections`);

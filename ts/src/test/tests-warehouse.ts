@@ -11,6 +11,7 @@ import {logger, setLogLevel} from '../lib/logger';
 
 let dataToIndex: string[] = ["./test/cache_Dir_1", "./test/cache_Dir_2", "./test/cache_Dir_3"];
 
+// Imitate a job content that will be insert in database
 let dataToAdd: types.jobSerialInterface = {
 		"script": "/My/Path/To/My/Script/script3.sh",
 		"exportVar": { 
@@ -55,7 +56,7 @@ export function startTests() {
 	return emitter;
 }
 
-
+// Start indexation
 function loadDumpIndexation(): EventEmitter {
 	let emitterDumpLoad: EventEmitter = new EventEmitter();
 	logger.log('info', `Reading data.json file content...`)
@@ -80,6 +81,7 @@ function loadDumpIndexation(): EventEmitter {
 	return emitterDumpLoad;
 }
 
+// Checking if job exist in database using constraints
 function checkConstraints(constraints: types.jobSerialConstraints): EventEmitter{
 
 	let emitterConst : EventEmitter = new EventEmitter();
@@ -98,6 +100,7 @@ function checkConstraints(constraints: types.jobSerialConstraints): EventEmitter
 	return emitterConst;
 }
 
+// Add a job into database
 function addJob(job: types.jobSerialInterface): EventEmitter{
 	let emitterAdd : EventEmitter = new EventEmitter();
 
@@ -113,6 +116,7 @@ function addJob(job: types.jobSerialInterface): EventEmitter{
 	return emitterAdd;
 }
 
+// Dump database into json file
 function dumpDatabase(): EventEmitter{
 	let emitterDump: EventEmitter = new EventEmitter();
 
@@ -124,8 +128,61 @@ function dumpDatabase(): EventEmitter{
 	return emitterDump;
 }
 
-export function deleteDocs() {
+// Clean database (remove files inserted without destroying database)
+export function cleanDB(addressDB: string, portDB: number, nameDB: string): EventEmitter {
+	let emitterDelete: EventEmitter = new EventEmitter();
+	//curl -X GET http://10.10.211.133:5984/ibmuwarticles/_all_docs
+	//curl -X DELETE http://127.0.0.1:5984/my_database/001?rev=1-3fcc78daac7a90803f0a5e383f4f1e1e
 
+	let chunkRes = '';
+	let chunkError = '';
+
+	let curl = spawn('curl', ['-X', 'GET', `http://${addressDB}:${portDB}/${nameDB}/_all_docs`]);
+
+	curl.stdout.on('data', (data: any) => {
+		chunkRes += data.toString('utf8');
+	})
+
+	curl.stderr.on('data', (data: any) => {
+		chunkError += data.toString('utf8');
+	})
+
+	curl.on('close', (code: any) => {
+		let parseChunkRes = JSON.parse(chunkRes);
+		let id: string = '';
+		let rev: string = '';
+
+		for (let [index,elem] of parseChunkRes.rows.entries()){
+			id = elem.id;
+			rev = elem.value.rev;
+			deleteDoc(id, rev, addressDB, portDB, nameDB);
+			if(index === parseChunkRes.rows.length - 1){
+				emitterDelete.emit('deleteDone');
+			}
+		}
+	})
+
+	return emitterDelete;
 }
 
+// Remove a single document into database
+function deleteDoc(id: string, rev: string, addressDB: string, portDB: number, nameDB: string ){
+	let chunkRes = '';
+	let chunkError = '';
+
+	let curl = spawn('curl', ['-X', 'DELETE', `http://${addressDB}:${portDB}/${nameDB}/${id}?rev=${rev}`]);
+
+	curl.stdout.on('data', (data: any) => {
+		chunkRes += data.toString('utf8');
+	})
+
+	curl.stderr.on('data', (data: any) => {
+		chunkError += data.toString('utf8');
+	})
+
+	curl.on('close', (code: any) => {
+
+	})
+
+}
 

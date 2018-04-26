@@ -34,6 +34,7 @@
     "glob": "^7.1.2",
     "is-uuid": "^1.0.2",
     "jsonfile": "^4.0.0",
+    "line-by-line": "^0.1.6",
     "load-json-file": "^4.0.0",
     "md5": "^2.2.1",
     "nano": "^6.4.3",

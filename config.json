@@ -1,9 +1,9 @@
 {
-	"configPath" : "/Users/vreymond/Stage/Projet/ms-warehouse/config.json",
 	"previousCacheDir" : ["./test/cache_Dir_1", "./test/cache_Dir_2", "./test/cache_Dir_3"],
 	"accountDBName": "vreymond",
 	"password": "couch",
 	"databaseName" : "warehouse",
+	"databaseAddress": "localhost",
 	"portCouch" : 5984,
 	"portExpress": 7687,
 	"portSocket": 7688

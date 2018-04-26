@@ -58,7 +58,6 @@ export async function addToDB (data: types.jobSerialInterface | types.jobSerialI
 
 	let docList: types.jobSerialInterface[] = Array.isArray(data) ? data : [data];
 	let arrayData:any[] = docList.length > 500 ? arraySplit(docList, 500) : docList;
-
 	for (let elem of arrayData) {
 		let addObj: addData = new addData(elem, nameDB, accountName, passwordDB);
 		await addObj.three_curl()

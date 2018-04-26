@@ -4,8 +4,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const jsonfile = require("jsonfile");
 const EventEmitter = require("events");
 const index = require("../index");
+const child_process_1 = require("child_process");
 const logger_1 = require("../lib/logger");
 let dataToIndex = ["./test/cache_Dir_1", "./test/cache_Dir_2", "./test/cache_Dir_3"];
+// Imitate a job content that will be insert in database
 let dataToAdd = {
     "script": "/My/Path/To/My/Script/script3.sh",
     "exportVar": {
@@ -45,6 +47,7 @@ function startTests() {
     return emitter;
 }
 exports.startTests = startTests;
+// Start indexation
 function loadDumpIndexation() {
     let emitterDumpLoad = new EventEmitter();
     logger_1.logger.log('info', `Reading data.json file content...`);
@@ -65,6 +68,7 @@ function loadDumpIndexation() {
     });
     return emitterDumpLoad;
 }
+// Checking if job exist in database using constraints
 function checkConstraints(constraints) {
     let emitterConst = new EventEmitter();
     logger_1.logger.log('info', `Looking for constraints in database... \n ${JSON.stringify(dataConstraints)}`);
@@ -79,6 +83,7 @@ function checkConstraints(constraints) {
     });
     return emitterConst;
 }
+// Add a job into database
 function addJob(job) {
     let emitterAdd = new EventEmitter();
     logger_1.logger.log('info', `Inserting jobID to database... \n ${JSON.stringify(dataToAdd)}`);
@@ -91,6 +96,7 @@ function addJob(job) {
     });
     return emitterAdd;
 }
+// Dump database into json file
 function dumpDatabase() {
     let emitterDump = new EventEmitter();
     logger_1.logger.log('info', `Starting database dumping...`);
@@ -100,6 +106,47 @@ function dumpDatabase() {
     });
     return emitterDump;
 }
-function deleteDocs() {
+// Clean database (remove files inserted without destroying database)
+function cleanDB(addressDB, portDB, nameDB) {
+    let emitterDelete = new EventEmitter();
+    //curl -X GET http://10.10.211.133:5984/ibmuwarticles/_all_docs
+    //curl -X DELETE http://127.0.0.1:5984/my_database/001?rev=1-3fcc78daac7a90803f0a5e383f4f1e1e
+    let chunkRes = '';
+    let chunkError = '';
+    let curl = child_process_1.spawn('curl', ['-X', 'GET', `http://${addressDB}:${portDB}/${nameDB}/_all_docs`]);
+    curl.stdout.on('data', (data) => {
+        chunkRes += data.toString('utf8');
+    });
+    curl.stderr.on('data', (data) => {
+        chunkError += data.toString('utf8');
+    });
+    curl.on('close', (code) => {
+        let parseChunkRes = JSON.parse(chunkRes);
+        let id = '';
+        let rev = '';
+        for (let [index, elem] of parseChunkRes.rows.entries()) {
+            id = elem.id;
+            rev = elem.value.rev;
+            deleteDoc(id, rev, addressDB, portDB, nameDB);
+            if (index === parseChunkRes.rows.length - 1) {
+                emitterDelete.emit('deleteDone');
+            }
+        }
+    });
+    return emitterDelete;
 }
-exports.deleteDocs = deleteDocs;
+exports.cleanDB = cleanDB;
+// Remove a single document into database
+function deleteDoc(id, rev, addressDB, portDB, nameDB) {
+    let chunkRes = '';
+    let chunkError = '';
+    let curl = child_process_1.spawn('curl', ['-X', 'DELETE', `http://${addressDB}:${portDB}/${nameDB}/${id}?rev=${rev}`]);
+    curl.stdout.on('data', (data) => {
+        chunkRes += data.toString('utf8');
+    });
+    curl.stderr.on('data', (data) => {
+        chunkError += data.toString('utf8');
+    });
+    curl.on('close', (code) => {
+    });
+}
