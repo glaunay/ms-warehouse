@@ -1,5 +1,5 @@
 {
-	"script":"/home/mgarnier/taskObject_devTests/install_from_git/hextask/./data/run_hex.sh",
+	"script":"/My/Path/To/My/Script/script.sh",
 	"exportVar": {
 		"hexFlags":" -nocuda -ncpu 16 ",
 		"hexScript":"/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"

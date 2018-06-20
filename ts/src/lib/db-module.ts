@@ -16,11 +16,19 @@ import {logger, setLogLevel} from '../lib/logger';
 * Function that accept a query and request couchDb with nano structure.
 * @query : mango query is required to be accepted by couchDb 
 */
-export function testRequest(query: types.query, nameDB: string, accountName: string, passwordDB: string): EventEmitter{
+export function testRequest(query: types.query, nameDB: string, accountName: string, passwordDB: string, addressDB: string, portDB: number, proxyBool: boolean): EventEmitter{
 	let reqEmitter : EventEmitter = new EventEmitter();
 	let chunkRes = '';
 	let chunkError = '';
-	let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-H','charset=utf-8','-d', `${JSON.stringify(query)}`, '-X', 'POST', `http://${accountName}:${passwordDB}@127.0.0.1:5984/${nameDB}/_find`])
+	let curl: any;
+	if (proxyBool){
+		// curl --noproxy 193.51.160.146 http://193.51.160.146:5984/
+		curl = spawn('curl', ['--noproxy',`${addressDB}`,'-s','-S','-H', 'Content-Type:application/json','-H','charset=utf-8','-d', `${JSON.stringify(query)}`, '-X', 'POST', `http://${accountName}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_find`])
+	}
+	else {
+		curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-H','charset=utf-8','-d', `${JSON.stringify(query)}`, '-X', 'POST', `http://${accountName}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_find`])
+	}
+
 	curl.stdout.on('data', (data: any) => {
 		chunkRes += data.toString('utf8');
 	})
@@ -54,12 +62,11 @@ export function testRequest(query: types.query, nameDB: string, accountName: str
 * #arrayData : If data length is higher than 500, we split array into array of 500 with the arraySplit function.
 * #addObj : addData class object, we use await before next iteration of the loop. 
 */
-export async function addToDB (data: types.jobSerialInterface | types.jobSerialInterface[], nameDB: string, accountName: string, passwordDB: string) : Promise<any> {
-
+export async function addToDB (data: types.jobSerialInterface | types.jobSerialInterface[], nameDB: string, accountName: string, passwordDB: string, addressDB: string, portDB: number, proxyBool: boolean) : Promise<any> {
 	let docList: types.jobSerialInterface[] = Array.isArray(data) ? data : [data];
 	let arrayData:any[] = docList.length > 500 ? arraySplit(docList, 500) : docList;
 	for (let elem of arrayData) {
-		let addObj: addData = new addData(elem, nameDB, accountName, passwordDB);
+		let addObj: addData = new addData(elem, nameDB, accountName, passwordDB, addressDB, portDB, proxyBool);
 		await addObj.three_curl()
 	};
 }
@@ -105,15 +112,21 @@ class addData extends EventEmitter{
 	nameDB: string;
 	accountName: string;
 	passwordDB: string;
+	addressDB: string;
+	portDB: number;
+	proxyBool: boolean;
 	chunkRes: string;
 	chunkError: string;
 	
-	constructor(_docList: types.jobSerialInterface[], _nameDB: string, _accountName: string, _passwordDB: string){
+	constructor(_docList: types.jobSerialInterface[], _nameDB: string, _accountName: string, _passwordDB: string, _addressDB: string, _portDB: number, _proxyBool: boolean){
 		super();
 		this.docList = _docList;
 		this.nameDB = _nameDB;
-		this.accountName = _accountName,
-		this.passwordDB = _passwordDB,
+		this.accountName = _accountName;
+		this.passwordDB = _passwordDB;
+		this.addressDB = _addressDB;
+		this.portDB = _portDB;
+		this.proxyBool = _proxyBool;
 		this.chunkRes = '';
 		this.chunkError = '';
 		let self: addData = this;
@@ -157,8 +170,16 @@ class addData extends EventEmitter{
 		let self: addData = this;
 		let p: any = new Promise((resolve, reject) => {
 			Array.isArray(self.docList) ? self.docList : self.docList = [self.docList];
+			let curl: any;
+			if (self.proxyBool){
+				// curl --noproxy 193.51.160.146 http://193.51.160.146:5984/
+				curl = spawn('curl', ['--noproxy',`${self.addressDB}`,'-s','-S','-H', 'Content-Type:application/json','-d', `{"docs": ${JSON.stringify(self.docList)}}`, '-X', 'POST', `http://${self.accountName}:${self.passwordDB}@${self.addressDB}:${self.portDB}/${self.nameDB}/_bulk_docs`]);
+			}
+			else {
+				curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-d', `{"docs": ${JSON.stringify(self.docList)}}`, '-X', 'POST', `http://${self.accountName}:${self.passwordDB}@${self.addressDB}:${self.portDB}/${self.nameDB}/_bulk_docs`]);
+			}
 			// (1)
-			let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-d', `{"docs": ${JSON.stringify(self.docList)}}`, '-X', 'POST', `http://${self.accountName}:${self.passwordDB}@127.0.0.1:5984/${self.nameDB}/_bulk_docs`]);
+			//let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-d', `{"docs": ${JSON.stringify(self.docList)}}`, '-X', 'POST', `http://${self.accountName}:${self.passwordDB}@${self.addressDB}:${self.portDB}/${self.nameDB}/_bulk_docs`]);
 			// (2)
 			curl.stdout.on('data', (data: any) => {
 				self.chunkRes += data.toString('utf8');

@@ -6,5 +6,6 @@
 	"databaseAddress": "localhost",
 	"portCouch" : 5984,
 	"portExpress": 7687,
-	"portSocket": 7688
+	"portSocket": 7688,
+	"warehouseAddress": "localhost"
 }

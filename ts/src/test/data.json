@@ -1,31 +1,31 @@
 [
-	{
-		"script": "/My/Path/To/My/Script/script.sh",
-		"exportVar": { 
-			"hexFlags": " -nocuda -ncpu 16 ",
-			"hexScript": "/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"
-		},
-		"modules": [ "naccess", "hex"],
-		"tagTask": "hex",
-		"scriptHash": "4286ddd9-3fde-4fa4-b542-57980fbaabbe",
-		"inputHash": { 
-			"file1.inp": "b61cba08-7df7-4fad-900b-b09414c38d5d",
-			"file2.inp": "22d4faa3-3d74-432d-bab1-5af7bbb99df3" 
-		}
-	},
+    {
+        "script": "/My/Path/To/My/Script/script10.sh",
+        "exportVar": { 
+            "hexFlags": " -nocuda -ncpu 16 ",
+            "hexScript": "/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"
+        },
+        "modules": [ "naccess", "hex"],
+        "tagTask": "hex",
+        "scriptHash": "4286ddd9-3fde-4fa4-b542-57980fbaabbe",
+        "inputHash": { 
+            "file1.inp": "b61cba08-7df7-4fad-900b-b09414c38d5d",
+            "file2.inp": "22d4faa3-3d74-432d-bab1-5af7bbb99df3" 
+        }
+    },
     { 
-    	"script": "/My/Path/To/My/Script/script2.sh",
-    	"exportVar": { 
-    		"hexFlags": " -nocuda -ncpu 16 ",
-    		"hexScript": "/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"
-    	},
-    	"modules": [ "naccess", "hex"],
-    	"tagTask": "hex",
-    	"scriptHash": "8043f0ab-faf3-414e-9420-f40aeb7ffe5b",
-    	"inputHash": { 
-    		"file1.inp": "37e34516-1531-4678-b19e-bc6a8e15ab97",
-       		"file2.inp": "90c62726-defc-4aca-a32a-ca625f7da2ad",
-       		"file3.inp": "694ed249-e494-4f23-9c25-541515b17d38"
-       	}
+        "script": "/My/Path/To/My/Script/script11.sh",
+        "exportVar": { 
+            "hexFlags": " -nocuda -ncpu 16 ",
+            "hexScript": "/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"
+        },
+        "modules": [ "naccess", "hex"],
+        "tagTask": "hex",
+        "scriptHash": "8043f0ab-faf3-414e-9420-f40aeb7ffe5b",
+        "inputHash": { 
+            "file1.inp": "37e34516-1531-4678-b19e-bc6a8e15ab97",
+            "file2.inp": "90c62726-defc-4aca-a32a-ca625f7da2ad",
+            "file3.inp": "694ed249-e494-4f23-9c25-541515b17d38"
+        }
     }
 ]

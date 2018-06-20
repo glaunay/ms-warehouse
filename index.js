@@ -55,8 +55,10 @@ let passwordDB = "";
 let addressDB = "";
 let portExpress;
 let portSocket;
+let addressWarehouse = "";
 let portDB; // default port for couchDB
 let configContent = null;
+let proxyBool = false;
 /*
 * Commander package that simplify the usage of commands line.
 */
@@ -67,6 +69,8 @@ program
     .option('-d, --dump', 'Dump the database into json file after indexation')
     .option('-l, --dumpload <path>', 'Load dump file from json file to construct the database')
     .option('-t, --test', 'Run tests of the warehouse')
+    .option('-p, --noproxy', 'Start the microservice without the proxy (to make curl command working)')
+    .option('-x, --dropdb', 'Drop the database in config.json')
     .parse(process.argv);
 logger_1.logger.log('info', "\t\t***** Starting public Warehouse MicroService *****\n");
 /*
@@ -90,7 +94,7 @@ if (program.config && program.config != "") {
     }
     catch (err) {
         //win.logger.log('ERROR', 'while readding and parsing the config file');
-        logger_1.logger.log('error', 'while readding and parsing the config file');
+        logger_1.logger.log('error', 'while reading and parsing the config file');
         throw err;
     }
 }
@@ -116,6 +120,8 @@ if (program.dump)
     dump = true;
 if (program.dumpload)
     dumpload = true;
+if (program.noproxy)
+    proxyBool = true;
 // Checking config.json content
 if (configContent.hasOwnProperty('accountDBName'))
     accountDB = configContent.accountDBName;
@@ -159,46 +165,56 @@ else {
     logger_1.logger.log('warning', 'No "portSocket" key found in config.json file');
     throw "stop execution";
 }
+if ((configContent.hasOwnProperty('warehouseAddress')))
+    addressWarehouse = configContent.warehouseAddress;
+else {
+    logger_1.logger.log('warning', 'No "warehouseAddress" key found in config.json file');
+    throw "stop execution";
+}
 let url = `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}`;
 logger_1.logger.log('info', `Connection to "${url}"`);
+//let nano = nanoDB({"url": url, "requestDefaults" : { "proxy" : "http://ftprox.ibcp.fr:3128"}})
 let nano = nanoDB(url);
+function warehouseTests() {
+    tests.startTests().on('allTestsDone', () => {
+        logger_1.logger.log('info', `Deleting tests documents in ${nameDB}...`);
+        tests.cleanDB(addressDB, portDB, nameDB, accountDB, passwordDB, proxyBool).on('deleteDone', () => {
+            logger_1.logger.log('success', `Deleting tests documents in ${nameDB} database succeed\n\n`);
+            logger_1.logger.log('success', 'All tests succeed, starting the warehouse...\n');
+            emitter.emit('created');
+        });
+    });
+}
 /*
 * couchDB database creation part.
 * First, we check if a database with the name specified already exists. If yes,
 * this database will be destroy before creating the new one (with the same name).
 */
-nano.db.destroy(nameDB, function (err) {
-    if (err && err.statusCode != 404) {
-        //win.logger.log('ERROR', `when destroying ${nameDB} database`);
-        logger_1.logger.log('error', `When destroying ${nameDB} database : \n`);
-        throw err;
-    }
-    nano.db.create(nameDB, function (err) {
-        if (err) {
-            //win.logger.log('ERROR', `during creation of the database '${nameDB}' : \n`);
-            logger_1.logger.log('error', `During creation of the database '${nameDB}' : \n`);
+function dropDB() {
+    nano.db.destroy(nameDB, function (err) {
+        if (err && err.statusCode != 404) {
+            //win.logger.log('ERROR', `when destroying ${nameDB} database`);
+            logger_1.logger.log('error', `When destroying ${nameDB} database : \n`);
             throw err;
         }
-        //win.logger.log('SUCCESS', `database ${nameDB} created \n`);
-        logger_1.logger.log('success', `Database ${nameDB} created \n`);
-        if (program.test) {
-            // calling tests from ./test/tests.warehouse.js
-            tests.startTests().on('allTestsDone', () => {
-                logger_1.logger.log('info', `Deleting tests documents in ${nameDB}...`);
-                tests.cleanDB(addressDB, portDB, nameDB).on('deleteDone', () => {
-                    logger_1.logger.log('success', `Deleting tests documents in ${nameDB} database succeed\n\n`);
-                    logger_1.logger.log('success', 'All tests succeed, starting the warehouse...\n');
-                    emitter.emit('created');
-                });
-                //.on('deleteFailed');
-                //emitter.emit('created');
-            });
-        }
-        else {
-            emitter.emit('created');
-        }
+        nano.db.create(nameDB, function (err) {
+            if (err) {
+                //win.logger.log('ERROR', `during creation of the database '${nameDB}' : \n`);
+                logger_1.logger.log('error', `During creation of the database '${nameDB}' : \n`);
+                throw err;
+            }
+            //win.logger.log('SUCCESS', `database ${nameDB} created \n`);
+            logger_1.logger.log('success', `Database ${nameDB} created \n`);
+            if (program.test) {
+                // calling tests from ./test/tests.warehouse.js
+                warehouseTests();
+            }
+            else {
+                emitter.emit('created');
+            }
+        });
     });
-});
+}
 /*
 * function dumpLoadOption that return a Promise object. This function will be called
 * if the "-l" option given in command line. Reading the json file, and doing some
@@ -387,16 +403,61 @@ emitter.on('created', () => {
         throw err;
     });
 });
+function dumpingDatabase() {
+    let dumpEmitter = new EventEmitter();
+    let wstream = fs.createWriteStream(`${nameDB}-dump.json`);
+    let chunkRes = '';
+    let chunkError = '';
+    let curl;
+    if (proxyBool) {
+        curl = child_process_1.spawn('curl', ['--noproxy', `${addressDB}`, `-X`, `GET`, `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_all_docs?include_docs=true`]);
+    }
+    else {
+        curl = child_process_1.spawn('curl', [`-X`, `GET`, `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_all_docs?include_docs=true`]);
+    }
+    curl.stdout.on('data', (data) => {
+        chunkRes += data.toString('utf8');
+    });
+    curl.stderr.on('data', (data) => {
+        chunkError += data.toString('utf8');
+    });
+    curl.on('close', (code) => {
+        let split = chunkError.replace(/(\r\n\t|\n|\r\t)/gm, " ").split(" ");
+        //let jsonChunkRes = JSON.parse(chunkRes);
+        //if (chunkError.length > 0 && !split.includes('200') && !split.includes('OK')) {
+        if (chunkError.length > 0 && chunkRes.length === 0) {
+            console.log(JSON.stringify(split));
+            logger_1.logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
+            //dumpEmitter.emit('dumpError', chunkError);
+        }
+        else {
+            var file = `./${nameDB}.json`;
+            try {
+                wstream.write(chunkRes);
+                logger_1.logger.log('success', `Dumping of ${nameDB} database succeed, ${nameDB}.json file created`);
+                dumpEmitter.emit('dumpDone');
+            }
+            catch (err) {
+                logger_1.logger.log('error', `Dumping of ${nameDB} database failed \n ${err}`);
+                dumpEmitter.emit('dumpFailed', err);
+            }
+        }
+    });
+    return dumpEmitter;
+}
+exports.dumpingDatabase = dumpingDatabase;
 /*
 * Function dumpingDatabase
+A FAIRE
+curl --noproxy 193.51.160.146 -X GET http://wh_user:3G7T36StzUw3@193.51.160.146:5984/job_warehouse/_all_docs?include_docs=true > db-test-curl.json
 */
-function dumpingDatabase() {
+function dumpingDatabase_() {
     let dumpEmitter = new EventEmitter();
     //let counter = 0
     let wstream = fs.createWriteStream(`${nameDB}.json`);
     let chunkRes = '';
     let chunkError = '';
-    let curl = child_process_1.spawn('cdbdump', ['-d', `${nameDB}`]);
+    let curl = child_process_1.spawn('cdbdump', ['-d', `{$nameDB}`]);
     curl.stdout.on('data', (data) => {
         chunkRes += data.toString('utf8');
     });
@@ -425,7 +486,7 @@ function dumpingDatabase() {
     });
     return dumpEmitter;
 }
-exports.dumpingDatabase = dumpingDatabase;
+exports.dumpingDatabase_ = dumpingDatabase_;
 /*
 * function that manage the call to the constraintsToQuery function. This part is listening on three event
 * returned by the constraintsToQuery event: "docsFound", "noDocsFound" and "errorOnConstraints"
@@ -481,7 +542,7 @@ function indexation(cacheArray) {
     // dbMod.addToDB(dataToCouch,nameDB, accountDB, passwordDB).on('addSucceed', () => {
     // 	emitter.emit('indexDone');
     // })
-    dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB)
+    dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB, addressDB, portDB, proxyBool)
         .then(() => {
         logger_1.logger.log('success', `Insertion of ${dataToCouch.length} jobID.json file(s) in ${nameDB}`);
         emitterIndex.emit('indexDone');
@@ -613,7 +674,7 @@ function constraintsToQuery(constraints, either = false) {
         }
     });
     logger_1.logger.log('debug', 'query: ' + JSON.stringify(query));
-    dbMod.testRequest(query, nameDB, accountDB, passwordDB).on('requestDone', (data) => {
+    dbMod.testRequest(query, nameDB, accountDB, passwordDB, addressDB, portDB, proxyBool).on('requestDone', (data) => {
         if (!data.docs.length) {
             constEmitter.emit('noDocsFound', data);
         }
@@ -626,13 +687,14 @@ function constraintsToQuery(constraints, either = false) {
     });
     return constEmitter;
 }
+exports.constraintsToQuery = constraintsToQuery;
 /*
 * function storeJob that call addToDb function with a job.
 * @job : job that will store into the couchDB database.
 */
 function storeJob(job) {
     let storeEmitter = new EventEmitter();
-    dbMod.addToDB(job, nameDB, accountDB, passwordDB)
+    dbMod.addToDB(job, nameDB, accountDB, passwordDB, addressDB, portDB, proxyBool)
         .then(() => {
         if (Array.isArray(job)) {
             logger_1.logger.log('success', `Insertion of ${job.length} jobID.json files in ${nameDB}`);
@@ -657,3 +719,15 @@ emitter.on('indexDone', () => {
     .on('callCurlErr', (err) => {
     logger_1.logger.log('error', `curl command failed: \n ${err}`);
 });
+if (program.dropdb) {
+    dropDB();
+}
+else {
+    if (program.test) {
+        // calling tests from ./test/tests.warehouse.js
+        warehouseTests();
+    }
+    else {
+        emitter.emit('created');
+    }
+}

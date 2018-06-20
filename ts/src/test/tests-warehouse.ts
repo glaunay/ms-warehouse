@@ -3,7 +3,9 @@ import jsonfile = require('jsonfile');
 import EventEmitter = require('events');
 // // Required modules
 import client = require('../wh-client');
-import index = require('../index');
+import * as index from "../index";
+//import index = require('../index');
+//import index = require('../index.js')
 import * as types from '../types/index';
 import {spawn} from 'child_process';
 import {logger, setLogLevel} from '../lib/logger';
@@ -13,7 +15,7 @@ let dataToIndex: string[] = ["./test/cache_Dir_1", "./test/cache_Dir_2", "./test
 
 // Imitate a job content that will be insert in database
 let dataToAdd: types.jobSerialInterface = {
-		"script": "/My/Path/To/My/Script/script3.sh",
+		"script": "/My/Path/To/My/Script/script.sh",
 		"exportVar": { 
 			"hexFlags": " -nocuda -ncpu 16 ",
 			"hexScript": "/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"
@@ -22,13 +24,17 @@ let dataToAdd: types.jobSerialInterface = {
 		"tagTask": "hex",
 		"scriptHash": "4286ddd9-3fde-4fa4-b542-57980fbaabbe",
 		"inputHash": { 
-			"file1.inp": "b61cba08-7df7-4fad-900b-b09414c38d5d",
-			"file2.inp": "22d4faa3-3d74-432d-bab1-5af7bbb99df3" 
+			"file1.inp": "42386c2d-fd44-459c-a94f-d4af29485b4f",
+			"file2.inp": "9e63443d-fc8f-49aa-9dc6-a7f8b15f0ceb" 
 		}
 	}
 
 let dataConstraints: types.jobSerialConstraints = {
-	"script": "/My/Path/To/My/Script/script3.sh"
+	"script": "/My/Path/To/My/Script/script.sh",
+	"inputHash": { 
+			"file1.inp": "42386c2d-fd44-459c-a94f-d4af29485b4f",
+			"file2.inp": "9e63443d-fc8f-49aa-9dc6-a7f8b15f0ceb" 
+		}
 }
 
 
@@ -56,6 +62,7 @@ export function startTests() {
 	return emitter;
 }
 
+
 // Start indexation
 function loadDumpIndexation(): EventEmitter {
 	let emitterDumpLoad: EventEmitter = new EventEmitter();
@@ -65,7 +72,6 @@ function loadDumpIndexation(): EventEmitter {
 
 	logger.log('success', '----> OK');
 	logger.log('info', `Start loading dump file to database...`)
-
 	index.storeJob(file.docs).on('storeDone', () => {
 		logger.log('success', `----> OK \n\n`);
 		logger.log('info', '***********     INDEXATION TEST     ***********')
@@ -75,7 +81,7 @@ function loadDumpIndexation(): EventEmitter {
 			emitterDumpLoad.emit('loadDone');
 		})		
 	})
-	.on('storeError', (err) => {
+	.on('storeError', (err:any) => {
 		logger.log('error', `Load dumping from ./data.json failed \n ${err}`);
 	})
 	return emitterDumpLoad;
@@ -103,7 +109,7 @@ function checkConstraints(constraints: types.jobSerialConstraints): EventEmitter
 // Add a job into database
 function addJob(job: types.jobSerialInterface): EventEmitter{
 	let emitterAdd : EventEmitter = new EventEmitter();
-
+	console.log('Dans la fonction addJob')
 	logger.log('info', `Inserting jobID to database... \n ${JSON.stringify(dataToAdd)}`);
 	index.storeJob(job).on('storeDone', () => {
 		logger.log('success', '----> OK\n\n');
@@ -128,35 +134,85 @@ function dumpDatabase(): EventEmitter{
 	return emitterDump;
 }
 
-// Clean database (remove files inserted without destroying database)
-export function cleanDB(addressDB: string, portDB: number, nameDB: string): EventEmitter {
+// // Clean database (remove files inserted without destroying database)
+// export function cleanDB_(addressDB: string, portDB: number, nameDB: string, accountDB: string, passwordDB: string, proxyBool: boolean): EventEmitter {
+// 	let emitterDelete: EventEmitter = new EventEmitter();
+// 	//curl -X GET http://10.10.211.133:5984/ibmuwarticles/_all_docs
+// 	//curl -X DELETE http://127.0.0.1:5984/my_database/001?rev=1-3fcc78daac7a90803f0a5e383f4f1e1e
+
+// 	let chunkRes = '';
+// 	let chunkError = '';
+// 	let curl: any;
+
+
+// 	if (proxyBool){
+// 		curl = spawn('curl', ['--noproxy',`${addressDB}`, '-X', 'GET', `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_all_docs`]);
+// 	}
+// 	else {
+// 		curl = spawn('curl', ['-X', 'GET', `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_all_docs`]);
+// 	}
+
+// 	curl.stdout.on('data', (data: any) => {
+// 		chunkRes += data.toString('utf8');
+// 	})
+
+// 	curl.stderr.on('data', (data: any) => {
+// 		chunkError += data.toString('utf8');
+// 	})
+
+// 	curl.on('close', (code: any) => {
+// 		let parseChunkRes = JSON.parse(chunkRes);
+// 		let id: string = '';
+// 		let rev: string = '';
+// 		console.log(JSON.stringify(parseChunkRes))
+
+
+// 		// test part for deleting doc by script test
+// 			let dataConstraintsTest: types.jobSerialConstraints = {
+// 				"script": "/My/Path/To/My/Script/script.sh"
+// 			}
+
+// 			index.constraintsToQuery(dataConstraintsTest).on('docsFound', (data) => {
+// 				console.log(JSON.stringify(data))
+// 			})
+				
+			
+
+// 		for (let [index,elem] of parseChunkRes.rows.entries()){
+// 			id = elem.id;
+// 			rev = elem.value.rev;
+// 			logger.log('debug', `Deleting ${id} of ${nameDB} database`);
+
+// 			deleteDoc(id, rev, addressDB, portDB, nameDB, accountDB, passwordDB, proxyBool);
+// 			if(index === parseChunkRes.rows.length - 1){
+// 				emitterDelete.emit('deleteDone');
+// 			}
+// 		}
+// 	})
+
+// 	return emitterDelete;
+
+// }
+
+export function cleanDB(addressDB: string, portDB: number, nameDB: string, accountDB: string, passwordDB: string, proxyBool: boolean): EventEmitter{
 	let emitterDelete: EventEmitter = new EventEmitter();
-	//curl -X GET http://10.10.211.133:5984/ibmuwarticles/_all_docs
-	//curl -X DELETE http://127.0.0.1:5984/my_database/001?rev=1-3fcc78daac7a90803f0a5e383f4f1e1e
+	let id: string = "";
+	let rev: string = "";
 
-	let chunkRes = '';
-	let chunkError = '';
 
-	let curl = spawn('curl', ['-X', 'GET', `http://${addressDB}:${portDB}/${nameDB}/_all_docs`]);
+	let dataConstraintsTest: types.jobSerialConstraints = {
+		"script": "/My/Path/To/My/Script/script.sh"
+	}
 
-	curl.stdout.on('data', (data: any) => {
-		chunkRes += data.toString('utf8');
-	})
+	index.constraintsToQuery(dataConstraintsTest).on('docsFound', (data) => {
+		let docs: types.jobSerialInterface[] = data.docs;
+		for (let [index,elem] of docs.entries()){
+			id = elem._id;
+			rev = elem._rev;
 
-	curl.stderr.on('data', (data: any) => {
-		chunkError += data.toString('utf8');
-	})
+			deleteDoc(id, rev, addressDB, portDB, nameDB, accountDB, passwordDB, proxyBool);
 
-	curl.on('close', (code: any) => {
-		let parseChunkRes = JSON.parse(chunkRes);
-		let id: string = '';
-		let rev: string = '';
-
-		for (let [index,elem] of parseChunkRes.rows.entries()){
-			id = elem.id;
-			rev = elem.value.rev;
-			deleteDoc(id, rev, addressDB, portDB, nameDB);
-			if(index === parseChunkRes.rows.length - 1){
+			if (index === docs.length - 1){
 				emitterDelete.emit('deleteDone');
 			}
 		}
@@ -166,11 +222,18 @@ export function cleanDB(addressDB: string, portDB: number, nameDB: string): Even
 }
 
 // Remove a single document into database
-function deleteDoc(id: string, rev: string, addressDB: string, portDB: number, nameDB: string ){
+function deleteDoc(id: string, rev: string, addressDB: string, portDB: number, nameDB: string, accountDB: string, passwordDB: string, proxyBool: boolean ){
 	let chunkRes = '';
 	let chunkError = '';
+	let curl: any;
 
-	let curl = spawn('curl', ['-X', 'DELETE', `http://${addressDB}:${portDB}/${nameDB}/${id}?rev=${rev}`]);
+	if (proxyBool){
+		curl = spawn('curl', ['--noproxy',`${addressDB}`, '-X', 'DELETE', `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/${id}?rev=${rev}`]);
+	}
+	else {
+		curl = spawn('curl', ['-X', 'DELETE', `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/${id}?rev=${rev}`]);
+	}
+	
 
 	curl.stdout.on('data', (data: any) => {
 		chunkRes += data.toString('utf8');
@@ -181,7 +244,7 @@ function deleteDoc(id: string, rev: string, addressDB: string, portDB: number, n
 	})
 
 	curl.on('close', (code: any) => {
-
+		logger.log('debug', `Deleting ${id} of ${nameDB} database`);
 	})
 
 }

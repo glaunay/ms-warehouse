@@ -76,10 +76,7 @@ exports.startServerExpress = function (port) {
             'value': 'express',
             'data': {}
         };
-        // let bulkArray = arraySplit(req.body);
-        // console.log(bulkArray[500].length)
         logger_1.logger.log('debug', `Json data receive from '/storeJob' \n ${JSON.stringify(req.body)}`);
-        //console.log(req.body.length);
         main.storeJob(req.body).on('storeDone', () => {
             [msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', {}];
             res.send(msgExpress);
@@ -92,38 +89,11 @@ exports.startServerExpress = function (port) {
             [msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', err];
             res.send(msgExpress);
         });
-        // 	bulkArray.forEach(function(elem){
-        // 	 main.storeJob(req.body).on('storeDone', () => {
-        // 		[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', {}];
-        // 		res.send(msgExpress);
-        // 	})
-        // 	.on('storeError', (docsAddFailed) => {
-        // 		[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', docsAddFailed];
-        // 		res.send(msgExpress);
-        // 	})
-        // 	.on('curlError', (err) => {
-        // 		[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', err];
-        // 		res.send(msgExpress);
-        // 	})
-        // })
-        // })
-        // main.storeJob(req.body).on('storeDone', () => {
-        // 	[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', {}];
-        // 	res.send(msgExpress);
-        // })
-        // .on('storeError', (docsAddFailed) => {
-        // 	[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', docsAddFailed];
-        // 	res.send(msgExpress);
-        // })
-        // .on('curlError', (err) => {
-        // 	[msgExpress.type, msgExpress.value, msgExpress.data] = ['results', 'success', err];
-        // 	res.send(msgExpress);
-        // })
     });
-    app.get('/test', (req, res) => {
-        logger_1.logger.log('info', 'HTTP test');
-        res.send('toto');
-    });
+    // app.get('/test', (req, res)=> {
+    // 	logger.log('info','HTTP test');
+    // 	res.send('toto');
+    // })
     // Listening express on port
     app.listen(port, () => {
         logger_1.logger.log('info', `Running server on port ${port} for HTTP connections`);

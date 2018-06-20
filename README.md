@@ -77,8 +77,8 @@ git clone https://github.com/melaniegarnier/ms-warehouse
 
 - Download it directly from the [Node.js](https://nodejs.org/) website.
 - Using packet manager:
-	- Linux (Ubuntu) : `sudo apt-get install nodejs npm`
-	- MacOS : `brew install node`
+    - Linux (Ubuntu) : `sudo apt-get install nodejs npm`
+    - MacOS : `brew install node`
 
 3) Install the NoSQL database CouchDB
 
@@ -196,9 +196,9 @@ Finally, the program will start running the micro-service on the two port specif
 
 
 # Contributors
-[<img alt="glaunay" src="https://avatars2.githubusercontent.com/u/1949853?s=460&v=4" width="117">](https://github.com/glaunay) | [<img alt="vreymond" src="https://avatars2.githubusercontent.com/u/25683049?s=460&v=4" width="117">](https://github.com/vreymond) | [<img alt="melaniegarnier" src="https://avatars1.githubusercontent.com/u/22618294?s=460&v=4" width="117">](https://github.com/melaniegarnier)|
+[<img alt="glaunay" src="https://avatars2.githubusercontent.com/u/1949853?s=460&v=4" width="117">](https://github.com/glaunay) | [<img alt="vreymond" src="https://avatars2.githubusercontent.com/u/25683049?s=460&v=4" width="117">](https://github.com/vreymond) | [<img alt="melaniegarnier" src="https://avatars1.githubusercontent.com/u/22618294?s=460&v=4" width="117">](https://github.com/melaniegarnier) |
 :---: |:---: |:---: |:---: |:---: |:---: |
-[glaunay](https://github.com/glaunay) |[vreymond](https://github.com/vreymond) |[melaniegarnier](https://github.com/melaniegarnier)
+[glaunay](https://github.com/glaunay) | [vreymond](https://github.com/vreymond) | [melaniegarnier](https://github.com/melaniegarnier)
  
 
 ## License

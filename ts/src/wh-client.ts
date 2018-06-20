@@ -11,9 +11,11 @@ import io = require('socket.io-client');
 import * as types from './types/index';
 import {logger, setLogLevel} from './lib/logger';
 
-let portSocket = config.portSocket
-let addressDB = config.databaseAddress
-let urlSocket: string = `http://${addressDB}:${portSocket}`
+let portSocket: number = config.portSocket;
+let addressWarehouse: string = config.warehouseAddress;
+let urlSocket: string = `http://${addressWarehouse}:${portSocket}`
+//let urlSocket: string = `http://${addressDB}:${portSocket}`
+
 
 /*
 * function push that send a message inside the socket connection to the warehouse server

@@ -45,8 +45,10 @@ let passwordDB: string = "";
 let addressDB: string = "";
 let portExpress: number;
 let portSocket: number;
+let addressWarehouse: string = "";
 let portDB: number; // default port for couchDB
 let configContent: any = null;
+let proxyBool: boolean = false;
 /*
 * Commander package that simplify the usage of commands line.
 */
@@ -57,6 +59,8 @@ program
   .option('-d, --dump', 'Dump the database into json file after indexation')
   .option('-l, --dumpload <path>', 'Load dump file from json file to construct the database')
   .option('-t, --test', 'Run tests of the warehouse')
+  .option('-p, --noproxy', 'Start the microservice without the proxy (to make curl command working)')
+  .option('-x, --dropdb', 'Drop the database in config.json')
   //.option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)')
   //.option('-s, --socket <port>', 'Specified the socket port')
   //.option('-x, --express <port>', 'Specified the express port')
@@ -89,7 +93,7 @@ if (program.config && program.config != "") { // (1)
 	}
 	catch(err){
 		//win.logger.log('ERROR', 'while readding and parsing the config file');
-		logger.log('error','while readding and parsing the config file');
+		logger.log('error','while reading and parsing the config file');
 		throw err;
 	}
 }
@@ -115,91 +119,103 @@ else{
 
 if (program.dump) dump = true;
 if (program.dumpload) dumpload = true;
+if (program.noproxy) proxyBool = true;
 
 // Checking config.json content
 if (configContent.hasOwnProperty('accountDBName')) accountDB = configContent.accountDBName;
 else {
-	logger.log('warning','No "accountDBName" key found in config.json file')
+	logger.log('warning','No "accountDBName" key found in config.json file');
 	throw "stop execution";
 }
 
 if (configContent.hasOwnProperty('password')) passwordDB = configContent.password;
 else {
-	logger.log('warning','No "password" key found in config.json file')
+	logger.log('warning','No "password" key found in config.json file');
 	throw "stop execution";
 }
 
 if (configContent.hasOwnProperty('databaseName')) nameDB = configContent.databaseName;
 else{
-	logger.log('warning','No "databaseName" key found in config.json file')
+	logger.log('warning','No "databaseName" key found in config.json file');
 	throw "stop execution";
 }
 
 if (configContent.hasOwnProperty('databaseAddress')) addressDB = configContent.databaseAddress;
 else{
-	logger.log('warning','No "databaseAddress" key found in config.json file')
+	logger.log('warning','No "databaseAddress" key found in config.json file');
 	throw "stop execution";
 }
 
 if (configContent.hasOwnProperty('portCouch')) portDB = configContent.portCouch;
 else {
-	logger.log('warning','No "portCouch" key found in config.json file')
+	logger.log('warning','No "portCouch" key found in config.json file');
 	throw "stop execution";
 }
 if (configContent.hasOwnProperty('portExpress')) portExpress = configContent.portExpress;
 else {
-	logger.log('warning','No "portExpress" key found in config.json file')
+	logger.log('warning','No "portExpress" key found in config.json file');
 	throw "stop execution";
 }
 if (configContent.hasOwnProperty('portSocket')) portSocket = configContent.portSocket;
 else {
-	logger.log('warning','No "portSocket" key found in config.json file')
+	logger.log('warning','No "portSocket" key found in config.json file');
+	throw "stop execution";
+}
+if( (configContent.hasOwnProperty('warehouseAddress'))) addressWarehouse = configContent.warehouseAddress;
+else {
+	logger.log('warning', 'No "warehouseAddress" key found in config.json file');
 	throw "stop execution";
 }
 
 let url: string = `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}`;
 logger.log('info',`Connection to "${url}"`)
+//let nano = nanoDB({"url": url, "requestDefaults" : { "proxy" : "http://ftprox.ibcp.fr:3128"}})
 let nano = nanoDB(url)
+
+
+function warehouseTests () : void {
+	tests.startTests().on('allTestsDone', () => {
+		logger.log('info', `Deleting tests documents in ${nameDB}...`);
+		tests.cleanDB(addressDB, portDB, nameDB, accountDB, passwordDB, proxyBool).on('deleteDone', () => {
+			logger.log('success', `Deleting tests documents in ${nameDB} database succeed\n\n`);
+			logger.log('success', 'All tests succeed, starting the warehouse...\n');
+			emitter.emit('created');
+		})
+	});
+}
 
 /*
 * couchDB database creation part. 
 * First, we check if a database with the name specified already exists. If yes,
 * this database will be destroy before creating the new one (with the same name).
 */
-nano.db.destroy(nameDB, function(err: any) {
-	if (err && err.statusCode != 404){
-		//win.logger.log('ERROR', `when destroying ${nameDB} database`);
-		logger.log('error',`When destroying ${nameDB} database : \n`)
-		throw err;
-	}
+function dropDB () : void {
+	nano.db.destroy(nameDB, function(err: any) {
+ 		if (err && err.statusCode != 404){
+ 			//win.logger.log('ERROR', `when destroying ${nameDB} database`);
+ 			logger.log('error',`When destroying ${nameDB} database : \n`)
+ 			throw err;
+ 		}
 
-	nano.db.create(nameDB, function(err: any) {
-		if (err){
-			//win.logger.log('ERROR', `during creation of the database '${nameDB}' : \n`);
-			logger.log('error',`During creation of the database '${nameDB}' : \n`)
-			throw err;
-		}
-		//win.logger.log('SUCCESS', `database ${nameDB} created \n`);
-		logger.log('success', `Database ${nameDB} created \n`)
-		if(program.test){
-			// calling tests from ./test/tests.warehouse.js
-			tests.startTests().on('allTestsDone', () => {
-				logger.log('info', `Deleting tests documents in ${nameDB}...`);
-				tests.cleanDB(addressDB, portDB, nameDB).on('deleteDone', () => {
-					logger.log('success', `Deleting tests documents in ${nameDB} database succeed\n\n`);
-					logger.log('success', 'All tests succeed, starting the warehouse...\n');
-					emitter.emit('created');
-				})
-				//.on('deleteFailed');
-				
-				//emitter.emit('created');
-			});
-		}
-		else {
-			emitter.emit('created');
-		}	
+ 		nano.db.create(nameDB, function(err: any) {
+ 			if (err){
+ 				//win.logger.log('ERROR', `during creation of the database '${nameDB}' : \n`);
+ 				logger.log('error',`During creation of the database '${nameDB}' : \n`)
+ 				throw err;
+ 			}
+ 			//win.logger.log('SUCCESS', `database ${nameDB} created \n`);
+ 			logger.log('success', `Database ${nameDB} created \n`)
+ 			if(program.test){
+ 				// calling tests from ./test/tests.warehouse.js
+ 				warehouseTests ();
+ 			}	
+ 			else {
+ 				emitter.emit('created');
+ 			}	
+ 		})
 	})
-})
+}
+
 
 /*
 * function dumpLoadOption that return a Promise object. This function will be called
@@ -341,6 +357,7 @@ emitter.on('created', () => {
 	// Sarting runOptions function, waiting for the Promise result.
 	// If resolved, starting warehouse server.
 	runOptions().then(() => {
+		
 		//starting express server
 		server.startServerExpress(portExpress);
 		//starting socket server + listeners
@@ -393,17 +410,72 @@ emitter.on('created', () => {
 	})
 })
 
+export function dumpingDatabase(): EventEmitter{
+
+	let dumpEmitter : EventEmitter = new EventEmitter();
+
+	let wstream = fs.createWriteStream(`${nameDB}-dump.json`);
+	let chunkRes = '';
+	let chunkError = '';
+	let curl: any;
+
+	if(proxyBool) {
+		curl = spawn('curl', ['--noproxy', `${addressDB}`, `-X`, `GET`, `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_all_docs?include_docs=true`])
+	}
+	else {
+		curl = spawn('curl', [`-X`, `GET`, `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_all_docs?include_docs=true`])
+	}
+
+	
+
+	curl.stdout.on('data', (data: any) => {
+		chunkRes += data.toString('utf8');
+	})
+
+	curl.stderr.on('data', (data: any) => {
+		chunkError += data.toString('utf8');
+	})
+
+	curl.on('close', (code: any) => {
+		let split: string[] = chunkError.replace(/(\r\n\t|\n|\r\t)/gm," ").split(" ")
+		//let jsonChunkRes = JSON.parse(chunkRes);
+
+		//if (chunkError.length > 0 && !split.includes('200') && !split.includes('OK')) {
+		if (chunkError.length > 0 && chunkRes.length === 0) {
+			console.log(JSON.stringify(split))
+			logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
+			//dumpEmitter.emit('dumpError', chunkError);
+		}
+		else{
+			var file = `./${nameDB}.json`
+ 			try {
+ 				wstream.write(chunkRes)
+ 				logger.log('success', `Dumping of ${nameDB} database succeed, ${nameDB}.json file created`);
+ 				dumpEmitter.emit('dumpDone');
+ 			}
+ 			catch(err){
+ 				logger.log('error', `Dumping of ${nameDB} database failed \n ${err}`);
+ 				dumpEmitter.emit('dumpFailed', err);
+ 			}
+		}
+	})
+
+	return dumpEmitter;
+}
+
 /* 
 * Function dumpingDatabase 
+A FAIRE
+curl --noproxy 193.51.160.146 -X GET http://wh_user:3G7T36StzUw3@193.51.160.146:5984/job_warehouse/_all_docs?include_docs=true > db-test-curl.json
 */
-export function dumpingDatabase(): EventEmitter{
+export function dumpingDatabase_(): EventEmitter{
 	let dumpEmitter: EventEmitter = new EventEmitter();
 	//let counter = 0
 	let wstream = fs.createWriteStream(`${nameDB}.json`)
 	let chunkRes = '';
 	let chunkError = '';
 
-	let curl = spawn('cdbdump', ['-d', `${nameDB}`]);
+	let curl = spawn('cdbdump', ['-d', `{$nameDB}`]);
 
 	curl.stdout.on('data', (data: any) => {
 		chunkRes += data.toString('utf8');
@@ -498,7 +570,8 @@ export function indexation(cacheArray: string[]) : EventEmitter {
 	// dbMod.addToDB(dataToCouch,nameDB, accountDB, passwordDB).on('addSucceed', () => {
 	// 	emitter.emit('indexDone');
 	// })
-	dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB)
+
+	dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB, addressDB, portDB, proxyBool)
 		.then(() => {
 			logger.log('success', `Insertion of ${dataToCouch.length} jobID.json file(s) in ${nameDB}`);
 			emitterIndex.emit('indexDone');
@@ -616,7 +689,7 @@ function extractDoc(path: string, uuid: string) : types.jobSerialInterface | nul
 *			If elem is not an objMap type, we do the same thing without the "$in" structure
 * (4) : listener on testRequest function. This function accept the query builded with constraintsToQuery.
 */
-function constraintsToQuery(constraints: types.jobSerialConstraints, either: boolean = false) : EventEmitter{
+export function constraintsToQuery(constraints: types.jobSerialConstraints, either: boolean = false) : EventEmitter{
 
 	let constEmitter : EventEmitter = new EventEmitter;
 	let query: types.query = {"selector": {}};
@@ -655,7 +728,7 @@ function constraintsToQuery(constraints: types.jobSerialConstraints, either: boo
 
 	logger.log('debug', 'query: ' + JSON.stringify(query))
 
-	dbMod.testRequest(query, nameDB, accountDB, passwordDB).on('requestDone', (data) => { // (4)
+	dbMod.testRequest(query, nameDB, accountDB, passwordDB, addressDB, portDB, proxyBool).on('requestDone', (data) => { // (4)
 		
 		if(!data.docs.length) {
 			constEmitter.emit('noDocsFound', data)
@@ -676,7 +749,7 @@ function constraintsToQuery(constraints: types.jobSerialConstraints, either: boo
 */
 export function storeJob(job: types.jobSerialInterface | types.jobSerialInterface[]): EventEmitter {
 	let storeEmitter: EventEmitter = new EventEmitter();
-	dbMod.addToDB(job, nameDB, accountDB, passwordDB)
+	dbMod.addToDB(job, nameDB, accountDB, passwordDB, addressDB, portDB, proxyBool)
 		.then(() => {
 			if (Array.isArray(job)){
 				logger.log('success', `Insertion of ${job.length} jobID.json files in ${nameDB}`);
@@ -704,6 +777,16 @@ emitter.on('indexDone', () => {
 })
 
 
-
-
+if (program.dropdb) {
+	dropDB ()
+}
+else {
+	if(program.test){
+		// calling tests from ./test/tests.warehouse.js
+		warehouseTests ();
+	}
+	else {
+		emitter.emit('created');
+	}
+}
 

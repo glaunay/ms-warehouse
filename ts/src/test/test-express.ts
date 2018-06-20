@@ -4,32 +4,33 @@
 */
 
 // Required packages
-import program = require('commander');
+//import program = require('commander');
 import request = require('request');
+const config = require('../config.json')
 // Required modules
 import * as types from '../types/index';
 import {logger, setLogLevel} from '../lib/logger';
 
-let portExpress: number;
-let serverAddress: string;
+logger.log('info',"\t\t***** Starting Warehouse features with HTTP connections *****\n");
 
-// Commander package part
-program
-  .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', setLogLevel)
-  .option('-x, --express <port>', 'Specified the port for express connection', 7687)
-  .option('-u, --urlserver <address>', 'Specified the warehouse server url, default is "http://localhost"', "http://localhost")
-  .parse(process.argv);
 
-portExpress = program.express;
-serverAddress = program.urlserver;
+// // Commander package part
+// program
+//   .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', setLogLevel)
+//   .option('-x, --express <port>', 'Specified the port for express connection', 7687)
+//   .option('-u, --urlserver <address>', 'Specified the warehouse server url, default is "http://localhost"', "http://localhost")
+//   .parse(process.argv);
 
-let urlExpress: string = `${serverAddress}:${portExpress}`
+let portExpress: number = config.portExpress;
+let addressWarehouse: string = config.warehouseAddress;
+
+let urlExpress: string = `http://${addressWarehouse}:${portExpress}`
 
 // constraints for testing
 let constraints: types.jobSerialConstraints = {
-	"script": null, "scriptHash": "7b8459fdb1eee409262251c429c48814",
+	"script": null, "scriptHash": "e50328c5-dc7f-445d-a5ef-449f4c4b9425",
 	"inputHash": {
-		"file1.inp": "7726e41aaafd85054aa6c9d4747dec7b"
+		"file1.inp": "5e2599cd-a22d-4c79-b5cb-4a6fd6291349"
 	},
 }
 
@@ -58,7 +59,7 @@ function createJobByExpress(constraints: types.jobSerialConstraints){
 		body: constraints,
 		json: true
 	}, function(error: any, response:any, body:any){
-		logger.log('info', `Message receive from server \n ${JSON.stringify(body)}`)
+		logger.log('info', `Message receive from server (check constraints)\n ${JSON.stringify(body)}`)
 	});
 }
 
@@ -73,7 +74,7 @@ function onJobComp(data: types.jobSerialInterface) {
 		body: jobID_Test,
 		json: true
 	}, function(error: any, response:any, body:any){
-		logger.log('infos', `Message receive from server \n ${JSON.stringify(body)}`)
+		logger.log('info', `Message receive from server (add job request) \n ${JSON.stringify(body)}`)
 	});
 }
 
