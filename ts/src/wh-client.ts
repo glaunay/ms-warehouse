@@ -26,7 +26,6 @@ let urlSocket: string = `http://${addressWarehouse}:${portSocket}`
 export function pushConstraints(constraints: types.jobSerialConstraints): EventEmitter {
 	let emitterConstraints : EventEmitter = new EventEmitter();
 	let socket = io.connect(urlSocket);
-	//let socketConstraints = io.connect(main.urlSocket);
 	let msg = messageBuilder(constraints, 'pushConstraints');
 
 	socket.on('connect', function() {

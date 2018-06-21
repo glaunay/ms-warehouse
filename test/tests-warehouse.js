@@ -50,8 +50,6 @@ function startTests() {
                 dumpDatabase().on('dumpOK', () => {
                     emitter.emit('allTestsDone');
                 });
-                // logger.log('info', '*********** EXTERNAL SOCKET CONNECTION TEST ***********');
-                // socketTest()
             });
         });
     });

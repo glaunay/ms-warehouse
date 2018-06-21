@@ -27,14 +27,12 @@ const fs = require("fs");
 const glob = require("glob");
 const jsonfile = require("jsonfile");
 const nanoDB = require("nano");
-//let nanoDB = require('nano')({requestDefaults:{pool:{maxSockets: Infinity}}})
 const program = require("commander");
 // Required modules
 const dbMod = __importStar(require("./lib/db-module"));
 const server = require("./wh-server");
 const types = __importStar(require("./types/index"));
 const tests = require("./test/tests-warehouse");
-//import win = require('./lib/logger');
 const logger_1 = require("./lib/logger");
 /*
 * Variable initialisation.
@@ -85,8 +83,6 @@ logger_1.logger.log('info', "\t\t***** Starting public Warehouse MicroService **
 *	- if index (3)
 *		this option ask the program to run the indexation feature.
 */
-// portSocket = program.socket
-// portExpress = program.express
 if (program.config && program.config != "") {
     pathConfig = program.config;
     try {
@@ -188,17 +184,14 @@ function warehouseTests() {
 function dropDB() {
     nano.db.destroy(nameDB, function (err) {
         if (err && err.statusCode != 404) {
-            //win.logger.log('ERROR', `when destroying ${nameDB} database`);
             logger_1.logger.log('error', `When destroying ${nameDB} database : \n`);
             throw err;
         }
         nano.db.create(nameDB, function (err) {
             if (err) {
-                //win.logger.log('ERROR', `during creation of the database '${nameDB}' : \n`);
                 logger_1.logger.log('error', `During creation of the database '${nameDB}' : \n`);
                 throw err;
             }
-            //win.logger.log('SUCCESS', `database ${nameDB} created \n`);
             logger_1.logger.log('success', `Database ${nameDB} created \n`);
             if (program.test) {
                 // calling tests from ./test/tests.warehouse.js
@@ -384,8 +377,6 @@ function dumpingDatabase(testDump = false) {
     });
     curl.on('close', (code) => {
         let split = chunkError.replace(/(\r\n\t|\n|\r\t)/gm, " ").split(" ");
-        //let jsonChunkRes = JSON.parse(chunkRes);
-        //if (chunkError.length > 0 && !split.includes('200') && !split.includes('OK')) {
         if (chunkError.length > 0 && chunkRes.length === 0) {
             logger_1.logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
         }
@@ -444,7 +435,6 @@ exports.constraintsCall = constraintsCall;
 function indexation(cacheArray) {
     let emitterIndex = new EventEmitter();
     let pathResult = globCaches(cacheArray);
-    // TO DO: check is jobID.json is empty file, or if {}
     // Adding "_id" key to all jobID.json content from pathResult.
     // directorySearch function return the name of the directory (uuid) that contain the jobID.json file.
     let dataToCouch = [];
@@ -452,16 +442,10 @@ function indexation(cacheArray) {
         let result = extractDoc(path, directorySearch(path));
         result && dataToCouch.push(result); // this method remove "0" but we don't have "0" so it's OK
     }
-    //let dataToCouch: types.jobID[] = pathResult.filter((elem) => extractDoc(elem, directorySearch(elem)));
-    //let dataToCouch: types.jobID[] = dataToFilter.filter(function(n) { return n != undefined; });
     if (program.test)
         logger_1.logger.log('success', '----> OK');
     logger_1.logger.log('info', `Number of jobID.json files found in directories: ${dataToCouch.length}`);
     logger_1.logger.log('debug', `${JSON.stringify(dataToCouch)}`);
-    // TO DO add logger size too big
-    // dbMod.addToDB(dataToCouch,nameDB, accountDB, passwordDB).on('addSucceed', () => {
-    // 	emitter.emit('indexDone');
-    // })
     dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB, addressDB, portDB, proxyBool)
         .then(() => {
         logger_1.logger.log('success', `Insertion of ${dataToCouch.length} jobID.json file(s) in ${nameDB}`);
@@ -531,7 +515,6 @@ function directorySearch(directoryPath) {
 */
 function extractDoc(path, uuid) {
     let file;
-    //TO DO, some checks???
     if (typeof (path) !== 'string') {
         logger_1.logger.log('warning', `path given is not a string type : \n ${path}`);
     }
@@ -542,8 +525,6 @@ function extractDoc(path, uuid) {
         logger_1.logger.log('warning', `while reading the json file ${path} : \n ${err}`);
         return null;
     }
-    //if (Array.isArray(file)) file["_id"] = uuid;
-    //file["_id"] = uuid;
     return file;
 }
 /*

@@ -4,8 +4,6 @@ import EventEmitter = require('events');
 // // Required modules
 import client = require('../wh-client');
 import * as index from "../index";
-//import index = require('../index');
-//import index = require('../index.js')
 import * as types from '../types/index';
 import {spawn} from 'child_process';
 import {logger, setLogLevel} from '../lib/logger';
@@ -52,9 +50,6 @@ export function startTests() {
 				dumpDatabase().on('dumpOK', () => {
 					emitter.emit('allTestsDone');
 				})
-				
-				// logger.log('info', '*********** EXTERNAL SOCKET CONNECTION TEST ***********');
-				// socketTest()
 			});
 		});
 	})

@@ -90,10 +90,6 @@ exports.startServerExpress = function (port) {
             res.send(msgExpress);
         });
     });
-    // app.get('/test', (req, res)=> {
-    // 	logger.log('info','HTTP test');
-    // 	res.send('toto');
-    // })
     // Listening express on port
     app.listen(port, () => {
         logger_1.logger.log('info', `Running server on port ${port} for HTTP connections`);
@@ -145,9 +141,3 @@ function push(type, packet) {
         packet.socket.emit('indexationResponse', msg);
 }
 exports.push = push;
-// function arraySplit(arrayToSplit: types.jobSerialInterface[]): types.jobSerialInterface[][]{
-// 	let array: types.jobSerialInterface[][] = splitArray(arrayToSplit, 200);
-// 	// console.log(array[0])
-// 	// console.log(array[0].length)
-// 	return array;
-// }

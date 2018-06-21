@@ -22,7 +22,6 @@ export function testRequest(query: types.query, nameDB: string, accountName: str
 	let chunkError = '';
 	let curl: any;
 	if (proxyBool){
-		// curl --noproxy 193.51.160.146 http://193.51.160.146:5984/
 		curl = spawn('curl', ['--noproxy',`${addressDB}`,'-s','-S','-H', 'Content-Type:application/json','-H','charset=utf-8','-d', `${JSON.stringify(query)}`, '-X', 'POST', `http://${accountName}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_find`])
 	}
 	else {
@@ -139,25 +138,19 @@ class addData extends EventEmitter{
 		let p = new Promise((resolve, reject) => {
 			self._curl()
 				.then(()=>{ 
-					//console.log("curl1 OK");
 					resolve() 
 				}) 
 				.catch(() => {
-					//console.log("curl1 PB");
 					self._curl()
 						.then(()=>{
-							//console.log("curl2 OK");
 							resolve()})				
 						.catch(() =>{
-							//console.log("curl2 PB");
 							self._curl()
 								.then(()=>{
-									//console.log("curl3 OK");
 									resolve()
 								})				
 								.catch(()=>{
 									logger.log('error','Max try adding reach')
-									//console.log("curl3 PB");
 									reject()
 								})
 						})
@@ -171,24 +164,25 @@ class addData extends EventEmitter{
 		let p: any = new Promise((resolve, reject) => {
 			Array.isArray(self.docList) ? self.docList : self.docList = [self.docList];
 			let curl: any;
+			// (1)
 			if (self.proxyBool){
-				// curl --noproxy 193.51.160.146 http://193.51.160.146:5984/
 				curl = spawn('curl', ['--noproxy',`${self.addressDB}`,'-s','-S','-H', 'Content-Type:application/json','-d', `{"docs": ${JSON.stringify(self.docList)}}`, '-X', 'POST', `http://${self.accountName}:${self.passwordDB}@${self.addressDB}:${self.portDB}/${self.nameDB}/_bulk_docs`]);
 			}
 			else {
 				curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-d', `{"docs": ${JSON.stringify(self.docList)}}`, '-X', 'POST', `http://${self.accountName}:${self.passwordDB}@${self.addressDB}:${self.portDB}/${self.nameDB}/_bulk_docs`]);
 			}
-			// (1)
-			//let curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-d', `{"docs": ${JSON.stringify(self.docList)}}`, '-X', 'POST', `http://${self.accountName}:${self.passwordDB}@${self.addressDB}:${self.portDB}/${self.nameDB}/_bulk_docs`]);
+
 			// (2)
 			curl.stdout.on('data', (data: any) => {
 				self.chunkRes += data.toString('utf8');
 
 			});
+
 			// (2)
 			curl.stderr.on('data', (data: any) => {
 				self.chunkError += data.toString('utf8');
 			});
+
 			// (3)
 			curl.on('close', (code: any) => {
 				let jsonChunkRes = eval(self.chunkRes);
@@ -209,7 +203,7 @@ class addData extends EventEmitter{
 							break;
 						}
 					}
-					//result[0] = false
+
 					// (6)
 					if(checkEqual && result[0] === true){
 						resolve();

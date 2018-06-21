@@ -6,24 +6,18 @@
 
 // Required packages
 import { spawn, exec } from 'child_process';
-import deepEqual = require('deep-equal');
 import EventEmitter = require('events');
 import fs = require('fs');
 import glob = require('glob');
 import jsonfile = require('jsonfile');
 import nanoDB = require('nano');
-import splitArray = require('split-array');
-//let nanoDB = require('nano')({requestDefaults:{pool:{maxSockets: Infinity}}})
 import program = require('commander');
 // Required modules
 import * as dbMod from './lib/db-module';
 import server = require('./wh-server');
 import * as types from './types/index';
 import tests = require('./test/tests-warehouse')
-//import win = require('./lib/logger');
 import {logger, setLogLevel} from './lib/logger';
-
-import loadJsonFile = require('load-json-file');
 
 /*
 * Variable initialisation.
@@ -60,9 +54,6 @@ program
   .option('-t, --test', 'Run tests of the warehouse')
   .option('-p, --noproxy', 'Start the microservice without the proxy (to make curl command working)')
   .option('-x, --dropdb', 'Drop the database in config.json')
-  //.option('-v, --verbose <level>', 'Specified the verbose level (debug, info, success, warning, error, critical)')
-  //.option('-s, --socket <port>', 'Specified the socket port')
-  //.option('-x, --express <port>', 'Specified the express port')
   .parse(process.argv);
 
 logger.log('info',"\t\t***** Starting public Warehouse MicroService *****\n");
@@ -80,9 +71,6 @@ logger.log('info',"\t\t***** Starting public Warehouse MicroService *****\n");
 *	- if index (3)
 *		this option ask the program to run the indexation feature.
 */
-
-// portSocket = program.socket
-// portExpress = program.express
 
 if (program.config && program.config != "") { // (1)
 	pathConfig = program.config;
@@ -186,18 +174,15 @@ function warehouseTests () : void {
 function dropDB () : void {
 	nano.db.destroy(nameDB, function(err: any) {
  		if (err && err.statusCode != 404){
- 			//win.logger.log('ERROR', `when destroying ${nameDB} database`);
  			logger.log('error',`When destroying ${nameDB} database : \n`)
  			throw err;
  		}
 
  		nano.db.create(nameDB, function(err: any) {
  			if (err){
- 				//win.logger.log('ERROR', `during creation of the database '${nameDB}' : \n`);
  				logger.log('error',`During creation of the database '${nameDB}' : \n`)
  				throw err;
  			}
- 			//win.logger.log('SUCCESS', `database ${nameDB} created \n`);
  			logger.log('success', `Database ${nameDB} created \n`)
  			if(program.test){
  				// calling tests from ./test/tests.warehouse.js
@@ -394,9 +379,7 @@ export function dumpingDatabase(testDump: boolean = false): EventEmitter{
 
 	curl.on('close', (code: any) => {
 		let split: string[] = chunkError.replace(/(\r\n\t|\n|\r\t)/gm," ").split(" ")
-		//let jsonChunkRes = JSON.parse(chunkRes);
-
-		//if (chunkError.length > 0 && !split.includes('200') && !split.includes('OK')) {
+		
 		if (chunkError.length > 0 && chunkRes.length === 0) {
 			logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
 		}
@@ -460,7 +443,6 @@ export function indexation(cacheArray: string[]) : EventEmitter {
 
 	let emitterIndex: EventEmitter = new EventEmitter(); 
 	let pathResult: string[] = globCaches(cacheArray);
-	// TO DO: check is jobID.json is empty file, or if {}
 
 	// Adding "_id" key to all jobID.json content from pathResult.
 	// directorySearch function return the name of the directory (uuid) that contain the jobID.json file.
@@ -469,15 +451,10 @@ export function indexation(cacheArray: string[]) : EventEmitter {
 		let result: types.jobSerialInterface | null = extractDoc(path, directorySearch(path));
 		result && dataToCouch.push(result); // this method remove "0" but we don't have "0" so it's OK
 	}
-	//let dataToCouch: types.jobID[] = pathResult.filter((elem) => extractDoc(elem, directorySearch(elem)));
-	//let dataToCouch: types.jobID[] = dataToFilter.filter(function(n) { return n != undefined; });
+	
 	if(program.test) logger.log('success', '----> OK');
 	logger.log('info', `Number of jobID.json files found in directories: ${dataToCouch.length}`);
 	logger.log('debug', `${JSON.stringify(dataToCouch)}`)
-	// TO DO add logger size too big
-	// dbMod.addToDB(dataToCouch,nameDB, accountDB, passwordDB).on('addSucceed', () => {
-	// 	emitter.emit('indexDone');
-	// })
 
 	dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB, addressDB, portDB, proxyBool)
 		.then(() => {
@@ -562,7 +539,7 @@ function directorySearch(directoryPath: string): string{
 function extractDoc(path: string, uuid: string) : types.jobSerialInterface | null {
 
 	let file: types.jobSerialInterface;
-	//TO DO, some checks???
+	
 	if (typeof(path) !== 'string'){
 		logger.log('warning', `path given is not a string type : \n ${path}`)
 	}
@@ -574,9 +551,6 @@ function extractDoc(path: string, uuid: string) : types.jobSerialInterface | nul
 		logger.log('warning', `while reading the json file ${path} : \n ${err}`);
 		return null;
 	}
-
-	//if (Array.isArray(file)) file["_id"] = uuid;
-	//file["_id"] = uuid;
 
 	return file;
 }

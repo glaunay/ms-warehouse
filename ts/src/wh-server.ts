@@ -106,10 +106,6 @@ export let startServerExpress = function(port: number) : void{
 		
 	})
 
-	// app.get('/test', (req, res)=> {
-	// 	logger.log('info','HTTP test');
-	// 	res.send('toto');
-	// })
 	// Listening express on port
 	app.listen(port, () => {
 		logger.log('info', `Running server on port ${port} for HTTP connections`)
@@ -161,13 +157,6 @@ export function push(type: string, packet: packetManager){
 	if(type === 'success' || type === 'errorAddJob' || type === 'curlError') packet.socket.emit('addingResponse', msg);
 	if(type === 'indexSuccess' || type === 'indexFailed') packet.socket.emit('indexationResponse', msg);
 }
-
-// function arraySplit(arrayToSplit: types.jobSerialInterface[]): types.jobSerialInterface[][]{
-// 	let array: types.jobSerialInterface[][] = splitArray(arrayToSplit, 200);
-// 	// console.log(array[0])
-// 	// console.log(array[0].length)
-// 	return array;
-// }
 
 
 
