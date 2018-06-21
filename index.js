@@ -93,7 +93,6 @@ if (program.config && program.config != "") {
         configContent = jsonfile.readFileSync(pathConfig); // parsing config.file content // add try catch
     }
     catch (err) {
-        //win.logger.log('ERROR', 'while readding and parsing the config file');
         logger_1.logger.log('error', 'while reading and parsing the config file');
         throw err;
     }
@@ -101,19 +100,16 @@ if (program.config && program.config != "") {
 else {
     logger_1.logger.log('warning', 'No config file specified');
     throw 'stop execution';
-    //throw win.logger.log('WARNING', 'No config file specified'); // config file must be specified.
 }
 if (program.index) {
     if (configContent.hasOwnProperty('previousCacheDir')) {
         index = true;
     }
     else {
-        //win.logger.log('WARNING', 'No "previousCacheDir" key found in config file');
         logger_1.logger.log('warning', 'No "previousCacheDir" key found in config file. Indexation will not work.');
     }
 }
 else {
-    //win.logger.log('INFO', 'No indexation asked');
     logger_1.logger.log('info', 'No indexation asked');
 }
 if (program.dump)
@@ -173,7 +169,6 @@ else {
 }
 let url = `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}`;
 logger_1.logger.log('info', `Connection to "${url}"`);
-//let nano = nanoDB({"url": url, "requestDefaults" : { "proxy" : "http://ftprox.ibcp.fr:3128"}})
 let nano = nanoDB(url);
 function warehouseTests() {
     tests.startTests().on('allTestsDone', () => {
@@ -222,14 +217,13 @@ function dropDB() {
 */
 function dumpLoadOption() {
     let p = new Promise((resolve, reject) => {
-        //let lr = new lineReader(program.dumpLoad);
         let file = jsonfile.readFileSync(program.dumpload);
         let fileContent = [];
-        if (file.hasOwnProperty("docs") && file.docs instanceof Object && file) {
-            if (!Array.isArray(file.docs))
-                fileContent.push(file.docs);
+        if (file.hasOwnProperty("rows") && file.rows instanceof Object && file) {
+            if (!Array.isArray(file.rows))
+                fileContent.push(file.rows);
             else
-                fileContent = file.docs;
+                fileContent = file.rows;
         }
         else if (Array.isArray(file))
             fileContent = file;
@@ -253,45 +247,6 @@ function dumpLoadOption() {
     });
     return p;
 }
-// function dumpLoadOption(){
-// 	let p = new Promise((resolve, reject)=> {
-// 		let lr: any = new lineReader('../bigJson.json');
-// 		let dataArray: types.jobSerialInterface[] = [];
-// 		lr.on('error', function (err: any) {
-// 			reject();
-// 		});
-// 		lr.on('line', function (line: any) {
-// 			lr.pause();
-// 			line = line.slice(0, -1);
-// 			if(line === '{"docs":'){
-// 				lr.resume();
-// 			}
-// 			else{
-// 				let obj: types.jobSerialInterface = JSON.parse(line);
-// 				dataArray.push(obj);
-// 				console.log(dataArray)
-// 				if(dataArray.length > 500){
-// 					logger.log('info', `Starting load dump file of ${program.dumpload}...`);
-// 					storeJob(dataArray).on('storeDone', () => {
-// 						logger.log('success', `Load dumping from ${program.dumpload} file to ${nameDB} database succeed\n`);
-// 						dataArray = [];
-// 						lr.resume();
-// 					})
-// 					.on('storeError', (err) => {
-// 						logger.log('error', `Load dumping from ${program.dumpload} failed \n ${err}`);
-// 					})	
-// 				}
-// 				else{				
-// 					lr.resume();
-// 				}
-// 			}
-// 		})
-// 		lr.on('end', function () {
-// 			resolve();
-// 		});
-// 	})
-// 	return p;
-// }
 /*
 * function indexationOption that return a Promise object. This function will be called
 * if the "-i" option given in command line. Starting the indexation of the
@@ -403,9 +358,15 @@ emitter.on('created', () => {
         throw err;
     });
 });
-function dumpingDatabase() {
+function dumpingDatabase(testDump = false) {
     let dumpEmitter = new EventEmitter();
-    let wstream = fs.createWriteStream(`${nameDB}-dump.json`);
+    let wstream;
+    if (testDump) {
+        wstream = fs.createWriteStream(`${nameDB}-dump-test.json`);
+    }
+    else {
+        wstream = fs.createWriteStream(`${nameDB}-dump.json`);
+    }
     let chunkRes = '';
     let chunkError = '';
     let curl;
@@ -426,15 +387,15 @@ function dumpingDatabase() {
         //let jsonChunkRes = JSON.parse(chunkRes);
         //if (chunkError.length > 0 && !split.includes('200') && !split.includes('OK')) {
         if (chunkError.length > 0 && chunkRes.length === 0) {
-            console.log(JSON.stringify(split));
             logger_1.logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
-            //dumpEmitter.emit('dumpError', chunkError);
         }
         else {
-            var file = `./${nameDB}.json`;
             try {
                 wstream.write(chunkRes);
-                logger_1.logger.log('success', `Dumping of ${nameDB} database succeed, ${nameDB}.json file created`);
+                if (testDump)
+                    logger_1.logger.log('success', `Dumping of ${nameDB} database succeed, ${nameDB}-dump-test.json file created`);
+                else
+                    logger_1.logger.log('success', `Dumping of ${nameDB} database succeed, ${nameDB}-dump.json file created`);
                 dumpEmitter.emit('dumpDone');
             }
             catch (err) {
@@ -446,47 +407,6 @@ function dumpingDatabase() {
     return dumpEmitter;
 }
 exports.dumpingDatabase = dumpingDatabase;
-/*
-* Function dumpingDatabase
-A FAIRE
-curl --noproxy 193.51.160.146 -X GET http://wh_user:3G7T36StzUw3@193.51.160.146:5984/job_warehouse/_all_docs?include_docs=true > db-test-curl.json
-*/
-function dumpingDatabase_() {
-    let dumpEmitter = new EventEmitter();
-    //let counter = 0
-    let wstream = fs.createWriteStream(`${nameDB}.json`);
-    let chunkRes = '';
-    let chunkError = '';
-    let curl = child_process_1.spawn('cdbdump', ['-d', `{$nameDB}`]);
-    curl.stdout.on('data', (data) => {
-        chunkRes += data.toString('utf8');
-    });
-    curl.stderr.on('data', (data) => {
-        chunkError += data.toString('utf8');
-    });
-    curl.on('close', (code) => {
-        let split = chunkError.replace(/(\r\n\t|\n|\r\t)/gm, " ").split(" ");
-        //let jsonChunkRes = JSON.parse(chunkRes);
-        if (chunkError.length > 0 && !split.includes('200') && !split.includes('OK')) {
-            logger_1.logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
-            //dumpEmitter.emit('dumpError', chunkError);
-        }
-        else {
-            var file = `./${nameDB}.json`;
-            try {
-                wstream.write(chunkRes);
-                logger_1.logger.log('success', `Dumping of ${nameDB} database succeed, ${nameDB}.json file created`);
-                dumpEmitter.emit('dumpDone');
-            }
-            catch (err) {
-                logger_1.logger.log('error', `Dumping of ${nameDB} database failed \n ${err}`);
-                dumpEmitter.emit('dumpFailed', err);
-            }
-        }
-    });
-    return dumpEmitter;
-}
-exports.dumpingDatabase_ = dumpingDatabase_;
 /*
 * function that manage the call to the constraintsToQuery function. This part is listening on three event
 * returned by the constraintsToQuery event: "docsFound", "noDocsFound" and "errorOnConstraints"

@@ -72,7 +72,7 @@ function loadDumpIndexation(): EventEmitter {
 
 	logger.log('success', '----> OK');
 	logger.log('info', `Start loading dump file to database...`)
-	index.storeJob(file.docs).on('storeDone', () => {
+	index.storeJob(file).on('storeDone', () => {
 		logger.log('success', `----> OK \n\n`);
 		logger.log('info', '***********     INDEXATION TEST     ***********')
 		logger.log('info', `Searching for jobID.json files in... \n ./test/cache_Dir_1  ./test/cache_Dir_2  ./test/cache_Dir_3`)
@@ -125,74 +125,16 @@ function addJob(job: types.jobSerialInterface): EventEmitter{
 // Dump database into json file
 function dumpDatabase(): EventEmitter{
 	let emitterDump: EventEmitter = new EventEmitter();
+	let test: boolean = true;
 
 	logger.log('info', `Starting database dumping...`);
-	index.dumpingDatabase().on('dumpDone', () => {
+	index.dumpingDatabase(test).on('dumpDone', () => {
 		logger.log('success', '----> OK\n\n');
 		emitterDump.emit('dumpOK');
 	})
 	return emitterDump;
 }
 
-// // Clean database (remove files inserted without destroying database)
-// export function cleanDB_(addressDB: string, portDB: number, nameDB: string, accountDB: string, passwordDB: string, proxyBool: boolean): EventEmitter {
-// 	let emitterDelete: EventEmitter = new EventEmitter();
-// 	//curl -X GET http://10.10.211.133:5984/ibmuwarticles/_all_docs
-// 	//curl -X DELETE http://127.0.0.1:5984/my_database/001?rev=1-3fcc78daac7a90803f0a5e383f4f1e1e
-
-// 	let chunkRes = '';
-// 	let chunkError = '';
-// 	let curl: any;
-
-
-// 	if (proxyBool){
-// 		curl = spawn('curl', ['--noproxy',`${addressDB}`, '-X', 'GET', `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_all_docs`]);
-// 	}
-// 	else {
-// 		curl = spawn('curl', ['-X', 'GET', `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_all_docs`]);
-// 	}
-
-// 	curl.stdout.on('data', (data: any) => {
-// 		chunkRes += data.toString('utf8');
-// 	})
-
-// 	curl.stderr.on('data', (data: any) => {
-// 		chunkError += data.toString('utf8');
-// 	})
-
-// 	curl.on('close', (code: any) => {
-// 		let parseChunkRes = JSON.parse(chunkRes);
-// 		let id: string = '';
-// 		let rev: string = '';
-// 		console.log(JSON.stringify(parseChunkRes))
-
-
-// 		// test part for deleting doc by script test
-// 			let dataConstraintsTest: types.jobSerialConstraints = {
-// 				"script": "/My/Path/To/My/Script/script.sh"
-// 			}
-
-// 			index.constraintsToQuery(dataConstraintsTest).on('docsFound', (data) => {
-// 				console.log(JSON.stringify(data))
-// 			})
-				
-			
-
-// 		for (let [index,elem] of parseChunkRes.rows.entries()){
-// 			id = elem.id;
-// 			rev = elem.value.rev;
-// 			logger.log('debug', `Deleting ${id} of ${nameDB} database`);
-
-// 			deleteDoc(id, rev, addressDB, portDB, nameDB, accountDB, passwordDB, proxyBool);
-// 			if(index === parseChunkRes.rows.length - 1){
-// 				emitterDelete.emit('deleteDone');
-// 			}
-// 		}
-// 	})
-
-// 	return emitterDelete;
-
-// }
 
 export function cleanDB(addressDB: string, portDB: number, nameDB: string, accountDB: string, passwordDB: string, proxyBool: boolean): EventEmitter{
 	let emitterDelete: EventEmitter = new EventEmitter();
