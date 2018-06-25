@@ -1,10 +1,10 @@
-# ms-warehouse
+# MS-Warehouse
 
 [![NodeJs](https://img.shields.io/badge/code-NodeJs-brightgreen.svg)](https://nodejs.org/en/)
 [![TypeScript](https://img.shields.io/badge/code-TypeScript-blue.svg)](https://www.typescriptlang.org)
 [![CouchDB](https://img.shields.io/badge/database-CouchDB-red.svg)](http://couchdb.apache.org)
 
-ms-warehouse is a MicroService (MS) which stores pipelines and jobs into a NoSQL database (couchDB), when a job is completed. Before the creation of a job, you can request the warehouse MS to check if any instance of this job (results) already exists inside the database. Once this job is found, the warehouse will bring back the job to the client. 
+MS-Warehouse is a MicroService (MS) which stores pipelines and jobs traces into a NoSQL database (couchDB), when a job is completed. Before the creation of a job, you can request the warehouse MS to check if any instance of this job (results) already exists inside the database. Once this job is found, the warehouse will bring back the job to the client. 
 
 ### Goals
 The job-warehouse MS has to know all the previous and actual existing pipelines (their topology and their tasks). Moreover, is has to store all the previous and actual existing tasks (their "ID card", their working directory and their status). For more informations about pipelines and tasks, see the [Pipelines and tasks](#pipelines-and-tasks) section.
@@ -174,7 +174,7 @@ node index.js -c config.json -i
 ```
 
 ## Running the tests
-
+### Global tests before starting the MS-Warehouse
 If you want to run some tests, you can use the ```-t``` command line option:
 
 ```javascript
@@ -198,6 +198,82 @@ This test will return an error, actually there is not job matching this specific
 
 If all tests succeed, the program will remove the 11 job documents added by the tests.
 Finally, the program will start running the micro-service on the two port specified in the ```./config.json``` file for the Socket and HTTP connections.
+
+### Socket and Express tests when MS-Warehouse running
+
+Once the Warehouse is running, you can execute two different tests using Socket connection or Express connection. Both of them will do two actions, the first one is a check inside the database is there is a job trace corresponding to a certain constraints. The database will return 0 document corresponding if its the first time you start those tests. The second part of those tests will add a specific job trace inside the database. The MS-warehouse return every time a message, in JSON format, to the test who request the database. A message is structured as below:
+
+```json
+// Messages returned the first time you run the Socket or Express tests
+// 1) Check if job trace exist in database, message returned by the micro-service (no docs found):
+{
+    "type":"results",
+    "value":"notFind",
+    "data":[]
+}
+
+// 2) Adding job trace into database (success value):
+{
+    "type":"results",
+    "value":"success",
+    "data":{}
+}
+```
+
+```json
+// Message returned the second time you start the test
+// 1) Check if job trace exist in database, message returned by the micro-service 
+// (one doc found added by the previous test):
+{
+    "type":"results",
+    "value":"find",
+    "data":[
+        {
+            "_id":"9e77ca03784c86afaf82761d5532f8e2",
+            "_rev":"1-8746bfeb42fbbd80f912c482efb71231",
+            "script":"/Socket/Connection/Script.sh",
+            "exportVar":{
+                "hexFlags":" -nocuda -ncpu 16 ",
+                "hexScript":"/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"
+            },
+            "modules":["naccess","hex"],
+            "tagTask":"hex",
+            "scriptHash":"7b8459fdb1eee409262251c429c48814",
+            "inputHash":{
+                "file1.inp":"7726e41aaafd85054aa6c9d4747dec7b",
+                "file2.inp":"b01ba442-be19-4c45-b6a6-345e0ffb6230"
+            }
+        }
+    ]
+}
+
+// 2) Adding job trace into database (success value):
+// If the test will be run one more time (3rd), we will see two document during checking part
+{
+    "type":"results",
+    "value":"success",
+    "data":{}
+}
+```
+
+- Socket connection test:
+
+
+```bash
+# Type this following command in the root of the warehouse directory to start the socket connection test.
+node test/test-socket.js
+```
+
+- Express connection test:
+
+```bash
+# Type this following command in the root of the warehouse directory to start the express connection test.
+node test/test-express.js
+```
+
+## API of MS-Warehouse
+
+This part will describe the API of the micro-service Warehouse
 
 
 # Contributors
