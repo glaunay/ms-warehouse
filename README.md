@@ -122,16 +122,19 @@ You can now follow the next part to run some tests.
  
 - To access the helping manual of the warehouse MS, containing the entire options list, just use the following command:
 
-```javascript
+```bash
 node index.js -h 
-// helping manual:
+# helping manual:
 Options:
+
     -c, --config <path>         Load config file
     -i, --index                 Run indexation of cache directories
     -v, --verbosity <logLevel>  Set log level (debug, info, success, warning, error, critical)
     -d, --dump                  Dump the database into json file after indexation
-    -l, --dumpload <path>       Load dump from json file to construct the database
+    -l, --dumpload <path>       Load dump file from json file to construct the database
     -t, --test                  Run tests of the warehouse
+    -p, --noproxy               Start the microservice without the proxy (to make curl command working)
+    -x, --dropdb                Drop the database in config.json
     -h, --help                  output usage information
 ```
 
@@ -153,7 +156,9 @@ The `./config.json` file is required by the program to work properly. This file 
 // portExpress refer to the port that the program listening on HTTP connections
 "portExpress": 7687,
 // portSocket refer to the port that the program listening on Socket connections
-"portSocket": 7688
+"portSocket": 7688,
+// warehouseAddress is the location (URL) of the ms-warehouse
+"warehouseAddress": "localhost"
 
 ```
 All of those properties are required by the program, but also the `-c <path>` command, if not the program won't work.
@@ -176,18 +181,18 @@ If you want to run some tests, you can use the ```-t``` command line option:
 node index -c config.json -t
 ```
 This command will call the ```./test/tests-warehouse.js``` that will runs a set of tests before starting the warehouse micro-service.
-Tests list:
+Tests list (by simply using -t command line option):
 
 - 1) Load dump file ---> This test will load an artificial dump file of a previous warehouse. The ```./test/data.json``` file will be loaded into the warehouse database. This file contain only 2 jobID.json files.
 
 - 2) Indexation ---> This test will the indexation feature from the warehouse API. It consist of extract some jobs of some cache directory. The program searched on 3 directory located in ```./test/cache_Dir_1```, ```./test/cache_Dir_2``` and  ```./test/cache_Dir_3```. 8 job files can be found in those directory. After this task, the program will store them into the warehouse database.
 
-- 3) Check constraints ---> This test will introduce another feature of the warehouse calling the research by constraints. Constraints is that will describe a specific job. The program will try to find a job (couchDB document) corresponding to this constraint: ```{"script":"/My/Path/To/My/Script/script3.sh"}```.
+- 3) Check constraints ---> This test will introduce another feature of the warehouse calling the research by constraints. Constraints is that will describe a specific job. The program will try to find a job (couchDB document) corresponding to this constraint: ```{"script":"/My/Path/To/My/Script/script.sh"}```.
 This test will return an error, actually there is not job matching this specific constraint stored inside the database. This result is expected.
 
-- 4) Adding job ---> This test will add a job with a ```"script"``` key with the value of the previous constraint ```{"script":"/My/Path/To/My/Script/script3.sh"}```. The database return a success message when the job is fully well inserted.
+- 4) Adding job ---> This test will add a job with a ```"script"``` key with the value of the previous constraint ```{"script":"/My/Path/To/My/Script/script.sh"}```. The database return a success message when the job is fully well inserted.
 
-- 5) Check constraints 2 ---> We try again to check if the job possessing the ```{"script":"/My/Path/To/My/Script/script3.sh"}``` constraint is now present in the database. The database will return ```ok```.
+- 5) Check constraints 2 ---> We try again to check if the job possessing the ```{"script":"/My/Path/To/My/Script/script.sh"}``` constraint is now present in the database. The database will return ```ok```.
 
 - 6) Database dump ---> This test will dump the database content in a json file (the name of the file is the database name given in the config.json file, for example ```warehouse.json```).
 
@@ -196,10 +201,14 @@ Finally, the program will start running the micro-service on the two port specif
 
 
 # Contributors
-[<img alt="glaunay" src="https://avatars2.githubusercontent.com/u/1949853?s=460&v=4" width="117">](https://github.com/glaunay) | [<img alt="vreymond" src="https://avatars2.githubusercontent.com/u/25683049?s=460&v=4" width="117">](https://github.com/vreymond) | [<img alt="melaniegarnier" src="https://avatars1.githubusercontent.com/u/22618294?s=460&v=4" width="117">](https://github.com/melaniegarnier) |
-:---: |:---: |:---: |:---: |:---: |:---: |
-[glaunay](https://github.com/glaunay) | [vreymond](https://github.com/vreymond) | [melaniegarnier](https://github.com/melaniegarnier)
- 
+
+> Guillaume Launay, Mélanie Garnier, Valentin Reymond
+
+| <a href="https://github.com/melaniegarnier/ms-jobmanager" target="_blank">**Job-Manager Micro-Service**</a> | <a href="https://github.com/melaniegarnier/taskobject" target="_blank">**Taskobject Micro-Service**</a> | <a href="https://github.com/melaniegarnier/ms-warehouse" target="_blank">**Warehouse Micro-Service**</a> |
+| :---: |:---:| :---:|
+| [<img alt="glaunay" src="https://avatars2.githubusercontent.com/u/1949853?s=460&v=4" width="150">](https://github.com/glaunay)     | [<img alt="melaniegarnier" src="https://avatars1.githubusercontent.com/u/22618294?s=460&v=4" width="150">](https://github.com/melaniegarnier) | [<img alt="vreymond" src="https://avatars2.githubusercontent.com/u/25683049?s=460&v=4" width="150">](https://github.com/vreymond) |
+| <a href="https://github.com/glaunay" target="_blank">`github.com/glaunay`</a> | <a href="https://github.com/melaniegarnier" target="_blank">`github.com/melaniegarnier`</a> | <a href="https://github.com/vreymond" target="_blank">`github.com/vreymond`</a> |
+
 
 ## License
 
