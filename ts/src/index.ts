@@ -1,23 +1,24 @@
 /*
 	Main file of the warehouse microservice.
 	This allow the user to add some job into a couchDB database.
-	Some options must be specified into the command line to run this microservice (see options parts). 
+	Some options must be specified into the command line to run this microservice (see options parts).
 */
 
 // Required packages
-import { spawn, exec } from 'child_process';
-import EventEmitter = require('events');
-import fs = require('fs');
-import glob = require('glob');
-import jsonfile = require('jsonfile');
-import nanoDB = require('nano');
-import program = require('commander');
+import { exec, spawn } from "child_process";
+import program = require ("commander");
+import EventEmitter = require ("events");
+import fs = require ("fs");
+import glob = require ("glob");
+import jsonfile = require ("jsonfile");
+import nanoDB = require ("nano");
+
 // Required modules
-import * as dbMod from './lib/db-module';
-import server = require('./wh-server');
-import * as types from './types/index';
-import tests = require('./test/tests-warehouse')
-import {logger, setLogLevel} from './lib/logger';
+import * as dbMod from "./lib/db-module";
+import { logger, setLogLevel } from "./lib/logger";
+import tests = require ("./test/tests-warehouse");
+import * as types from "./types/index";
+import server = require ("./wh-server");
 
 /*
 * Variable initialisation.
@@ -31,7 +32,7 @@ let index: boolean = false;
 let dump: boolean = false;
 let dumpload: boolean = false;
 let pathConfig: any;
-let emitter: EventEmitter = new EventEmitter();
+const emitter: EventEmitter = new EventEmitter();
 let nameDB: string = "warehouse"; // default value
 let accountDB: string = "";
 let passwordDB: string = "";
@@ -46,21 +47,20 @@ let proxyBool: boolean = false;
 * Commander package that simplify the usage of commands line.
 */
 program
-  .option('-c, --config <path>', 'Load config file')
-  .option('-i, --index', 'Run indexation of cache directories')
-  .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', setLogLevel)
-  .option('-d, --dump', 'Dump the database into json file after indexation')
-  .option('-l, --dumpload <path>', 'Load dump file from json file to construct the database')
-  .option('-t, --test', 'Run tests of the warehouse')
-  .option('-p, --noproxy', 'Start the microservice without the proxy (to make curl command working)')
-  .option('-x, --dropdb', 'Drop the database in config.json')
+  .option("-c, --config <path>", "Load config file")
+  .option("-i, --index", "Run indexation of cache directories")
+  .option("-v, --verbosity <logLevel>", "Set log level (debug, info, success, warning, error, critical)", setLogLevel)
+  .option("-d, --dump", "Dump the database into json file after indexation")
+  .option("-l, --dumpload <path>", "Load dump file from json file to construct the database")
+  .option("-t, --test", "Run tests of the warehouse")
+  .option("-p, --noproxy", "Start the microservice without the proxy (to make curl command working)")
+  .option("-x, --dropdb", "Drop the database in config.json")
   .parse(process.argv);
 
-logger.log('info',"\t\t***** Starting public Warehouse MicroService *****\n");
-
+logger.log("info", "\t\t***** Starting public Warehouse MicroService *****\n");
 
 /*
-* This is an options check part. 
+* This is an options check part.
 * 3 questions are asked:
 *	- if config	(1)
 *		config is the most important one. It specified the path of the config file. This file contains important
@@ -71,19 +71,19 @@ logger.log('info',"\t\t***** Starting public Warehouse MicroService *****\n");
 *	- if index (3)
 *		this option ask the program to run the indexation feature.
 */
-
-if (program.config && program.config != "") { // (1)
-	pathConfig = program.config;
+if (program.config && program.config !== "") { // (1)
+    pathConfig = program.config;
 
 	try{
 		configContent = jsonfile.readFileSync(pathConfig);			// parsing config.file content // add try catch
 	}
-	catch(err){
+	catch (err) {
 		logger.log('error','while reading and parsing the config file');
 		throw err;
 	}
 }
-else{
+
+else {
 	logger.log('warning','No config file specified');
 	throw 'stop execution';
 }
@@ -92,11 +92,11 @@ if (program.index) { // (3)
 	if (configContent.hasOwnProperty('previousCacheDir')){
 		index = true;
 	}
-	else{
+	else {
 		logger.log('warning','No "previousCacheDir" key found in config file. Indexation will not work.')
 	}
 } 
-else{
+else {
 	logger.log('info','No indexation asked');
 }
 
@@ -105,56 +105,60 @@ if (program.dumpload) dumpload = true;
 if (program.noproxy) proxyBool = true;
 
 // Checking config.json content
+// Every config.json property are required
 if (configContent.hasOwnProperty('accountDBName')) accountDB = configContent.accountDBName;
 else {
 	logger.log('warning','No "accountDBName" key found in config.json file');
-	throw "stop execution";
+	throw 'stop execution';
 }
 
 if (configContent.hasOwnProperty('password')) passwordDB = configContent.password;
 else {
 	logger.log('warning','No "password" key found in config.json file');
-	throw "stop execution";
+	throw 'stop execution';
 }
 
 if (configContent.hasOwnProperty('databaseName')) nameDB = configContent.databaseName;
 else{
 	logger.log('warning','No "databaseName" key found in config.json file');
-	throw "stop execution";
+	throw 'stop execution';
 }
 
 if (configContent.hasOwnProperty('databaseAddress')) addressDB = configContent.databaseAddress;
 else{
 	logger.log('warning','No "databaseAddress" key found in config.json file');
-	throw "stop execution";
+	throw 'stop execution';
 }
 
 if (configContent.hasOwnProperty('portCouch')) portDB = configContent.portCouch;
 else {
 	logger.log('warning','No "portCouch" key found in config.json file');
-	throw "stop execution";
+	throw 'stop execution';
 }
 if (configContent.hasOwnProperty('portExpress')) portExpress = configContent.portExpress;
 else {
 	logger.log('warning','No "portExpress" key found in config.json file');
-	throw "stop execution";
+	throw 'stop execution';
 }
 if (configContent.hasOwnProperty('portSocket')) portSocket = configContent.portSocket;
 else {
 	logger.log('warning','No "portSocket" key found in config.json file');
-	throw "stop execution";
+	throw 'stop execution';
 }
 if( (configContent.hasOwnProperty('warehouseAddress'))) addressWarehouse = configContent.warehouseAddress;
 else {
 	logger.log('warning', 'No "warehouseAddress" key found in config.json file');
-	throw "stop execution";
+	throw 'stop execution';
 }
 
 let url: string = `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}`;
 logger.log('info',`Connection to "${url}"`)
 let nano = nanoDB(url)
 
-
+/*
+* function warehouseTests that run the warehouse tests.
+* When all tests succeed, we clean the database to remove tests jobs.
+*/
 function warehouseTests () : void {
 	tests.startTests().on('allTestsDone', () => {
 		logger.log('info', `Deleting tests documents in ${nameDB}...`);
@@ -173,18 +177,18 @@ function warehouseTests () : void {
 */
 function dropDB () : void {
 	nano.db.destroy(nameDB, function(err: any) {
- 		if (err && err.statusCode != 404){
+ 		if (err && err.statusCode != 404) {
  			logger.log('error',`When destroying ${nameDB} database : \n`)
  			throw err;
  		}
 
  		nano.db.create(nameDB, function(err: any) {
- 			if (err){
+ 			if (err) {
  				logger.log('error',`During creation of the database '${nameDB}' : \n`)
  				throw err;
  			}
  			logger.log('success', `Database ${nameDB} created \n`)
- 			if(program.test){
+ 			if (program.test) {
  				// calling tests from ./test/tests.warehouse.js
  				warehouseTests ();
  			}	
@@ -201,18 +205,18 @@ function dropDB () : void {
 * if the "-l" option given in command line. Reading the json file, and doing some
 * checks. When done, simply calling storeJob function to add the json file content.
 */
-function dumpLoadOption(): Promise<{}>{
-	let p: Promise<any> = new Promise((resolve, reject)=> {
+function dumpLoadOption () : Promise<{}> {
+	let p: Promise<any> = new Promise((resolve, reject) => {
 		let file = jsonfile.readFileSync(program.dumpload);
 		let fileContent: types.jobSerialInterface[] = [];
 		if (file.hasOwnProperty("rows") && file.rows instanceof Object && file) {
 			if (!Array.isArray(file.rows)) fileContent.push(file.rows);
 			else fileContent = file.rows;
-		}	
+		}
 		else if (Array.isArray(file)) fileContent = file;
 		else logger.log('warning', `dump from JSON file failed, not a JSON format, please refer to the documentation`);
 
-		if (fileContent.length > 0){
+		if (fileContent.length > 0) {
 			logger.log('info', `Starting load dump file of ${program.dumpload}...`);
 
 			storeJob(fileContent).on('storeDone', () => {
@@ -238,8 +242,8 @@ function dumpLoadOption(): Promise<{}>{
 * if the "-i" option given in command line. Starting the indexation of the 
 * cache dir path given is ./config.json file.
 */
-function indexationOption(): Promise<{}>{
-	return new Promise((resolve, reject)=>{
+function indexationOption () : Promise<{}> {
+	return new Promise((resolve, reject) => {
 		logger.log('info', `Starting indexation...`);
 		indexation(configContent.previousCacheDir)
 		.on('indexDone', () => {
@@ -258,8 +262,8 @@ function indexationOption(): Promise<{}>{
 * if the "-d" option given i command line. Dumping the database into a json file
 * with the name of the database created.
 */
-function dumpOption() : Promise<{}>{
-	return new Promise((resolve, reject)=>{
+function dumpOption() : Promise<{}> {
+	return new Promise((resolve, reject) => {
 		dumpingDatabase()
 		.on('dumpDone', () => {
 			logger.log('success', `Dumping of ${nameDB} succeed, ${nameDB}.json file created\n`);
@@ -277,7 +281,7 @@ function dumpOption() : Promise<{}>{
 * starting the next instructions. This function return also a Promise object, but its implicit.
 * Once all await instructions finished, the function implicit execute a "resolve()".
 */
-async function runOptions(): Promise<{}> {
+async function runOptions () : Promise<{}> {
 	if (dumpload) await dumpLoadOption();
 	if (index) await indexationOption();
 	if (dump) await dumpOption();
@@ -296,56 +300,65 @@ emitter.on('created', () => {
 		//starting express server
 		server.startServerExpress(portExpress);
 		//starting socket server + listeners
-		server.startServerSocket(portSocket).on('findBySocket', (packet: any) => {
+		server.startServerSocket(portSocket).on('findBySocket', (packet : any) => {
 			constraintsCall(packet.data(), 'socket')
-			.on('socketSucceed', (docsArray: types.objMap[]) => {
+			.on('socketSucceed', (docsArray : types.objMap[]) => {
 				packet.data(docsArray);
 				server.push('find', packet = packet);
 			})
-			.on('socketNoResults', (docsArray: types.objMap[]) => {
+			.on('socketNoResults', (docsArray : types.objMap[]) => {
 				packet.data(docsArray);
 				server.push('notFind', packet = packet);
 			})
-			.on('socketFailed', (error) => {
+			.on('socketFailed', (error : any) => {
 				packet.data(error);
 				server.push('errorConstraints', packet = packet);
 			})
 		})
-		.on('jobToStore', (packet: any) =>{
+		.on('jobToStore', (packet : any) => {
 			storeJob(packet.data()).on('storeDone', () => {
 				packet.data({});
 				server.push('success', packet = packet);
 			})
-			.on('storError', (docsAddFailed) => {
+			.on('storError', (docsAddFailed : any) => {
 				packet.data(docsAddFailed);
 				server.push('errorAddJob', packet = packet);
 			})
-			.on('curlErr', (err) => {
+			.on('curlErr', (err : any) => {
 				packet.data(err);
 				server.push('curlError', packet = packet);
 			})
 		})
-		.on('indexRequest', (packet: any) => {
+		.on('indexRequest', (packet : any) => {
 			indexation(packet.data()).on('indexDone', () => {
 				logger.log('info', 'Indexation succeed properly');
 				packet.data({});
 				server.push('indexSuccess', packet = packet);
 			})
-			.on('indexError', (err) => {
+			.on('indexError', (err : any) => {
 				logger.log('error', `Indexation failed \n ${err}`);
 				packet.data(err);
 				server.push('indexFailed', packet = packet);
 			})
 		})
 	})
-	.catch((err) => {
+	.catch((err : any) => {
 		logger.log('error', `An error occured:`);
-
 		throw err;
 	})
 })
 
-export function dumpingDatabase(testDump: boolean = false): EventEmitter{
+/*
+* function dumpingDatabase that create a json dump file of all the content of the database (name in config.json)
+* Using the curl command for this operation. If the "-p" flag is specified in command line, we construct the curl commande
+* without the proxy server.
+* @testDump : Only used by the test/tests-warehouse.js file. It allows the creation of a different file name for the tests.
+* #dumpEmitter : Event Emitter that emit two event "dumpDone" and "dumpFailed".
+* #wstream : Writable stream object.
+* #chunkRes : Result chunk from the stream (standard output).
+* #chunkError : Error chunk from the stream (standard error).
+*/
+export function dumpingDatabase (testDump : boolean = false) : EventEmitter {
 	
 	let dumpEmitter : EventEmitter = new EventEmitter();
 	let wstream : fs.WriteStream;
@@ -358,27 +371,25 @@ export function dumpingDatabase(testDump: boolean = false): EventEmitter{
 	
 	let chunkRes = '';
 	let chunkError = '';
-	let curl: any;
+	let curl : any;
 	
-	if(proxyBool) {
+	if (proxyBool) {
 		curl = spawn('curl', ['--noproxy', `${addressDB}`, `-X`, `GET`, `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_all_docs?include_docs=true`])
 	}
 	else {
 		curl = spawn('curl', [`-X`, `GET`, `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_all_docs?include_docs=true`])
 	}
 
-	
-
-	curl.stdout.on('data', (data: any) => {
+	curl.stdout.on('data', (data : any) => {
 		chunkRes += data.toString('utf8');
 	})
 
-	curl.stderr.on('data', (data: any) => {
+	curl.stderr.on('data', (data : any) => {
 		chunkError += data.toString('utf8');
 	})
 
-	curl.on('close', (code: any) => {
-		let split: string[] = chunkError.replace(/(\r\n\t|\n|\r\t)/gm," ").split(" ")
+	curl.on('close', (code : any) => {
+		let split : string[] = chunkError.replace(/(\r\n\t|\n|\r\t)/gm," ").split(" ")
 		
 		if (chunkError.length > 0 && chunkRes.length === 0) {
 			logger.log('error', `Dumping of ${nameDB} database failed \n ${chunkError}`);
@@ -407,7 +418,7 @@ export function dumpingDatabase(testDump: boolean = false): EventEmitter{
 * @constraints : constraints to check 
 * @connectType : specify wich connection type
 */
-export function constraintsCall(constraints: types.jobSerialConstraints, connectType: string) : EventEmitter {
+export function constraintsCall (constraints : types.jobSerialConstraints, connectType : string) : EventEmitter {
 
 	let emitterCall: EventEmitter = new EventEmitter()
 	// if docs found in couchDB database
@@ -439,29 +450,29 @@ export function constraintsCall(constraints: types.jobSerialConstraints, connect
 * #dataToCouch : array that will contain all jobID.json file that attempt to be add inside the couchDB database.
 * #pathResult : list of all jobID.json path found in all caches directory.
 */
-export function indexation(cacheArray: string[]) : EventEmitter {
+export function indexation (cacheArray : string[]) : EventEmitter {
 
-	let emitterIndex: EventEmitter = new EventEmitter(); 
-	let pathResult: string[] = globCaches(cacheArray);
+	let emitterIndex : EventEmitter = new EventEmitter(); 
+	let pathResult : string[] = globCaches(cacheArray);
 
 	// Adding "_id" key to all jobID.json content from pathResult.
 	// directorySearch function return the name of the directory (uuid) that contain the jobID.json file.
-	let dataToCouch: types.jobSerialInterface[] = [];
+	let dataToCouch : types.jobSerialInterface[] = [];
 	for (let path of pathResult) {
-		let result: types.jobSerialInterface | null = extractDoc(path, directorySearch(path));
+		let result : types.jobSerialInterface | null = extractDoc(path, directorySearch(path));
 		result && dataToCouch.push(result); // this method remove "0" but we don't have "0" so it's OK
 	}
 	
-	if(program.test) logger.log('success', '----> OK');
+	if (program.test) logger.log('success', '----> OK');
 	logger.log('info', `Number of jobID.json files found in directories: ${dataToCouch.length}`);
 	logger.log('debug', `${JSON.stringify(dataToCouch)}`)
 
 	dbMod.addToDB(dataToCouch, nameDB, accountDB, passwordDB, addressDB, portDB, proxyBool)
-		.then(() => {
+		.then (() => {
 			logger.log('success', `Insertion of ${dataToCouch.length} jobID.json file(s) in ${nameDB}`);
 			emitterIndex.emit('indexDone');
 		})
-		.catch((err) => {
+		.catch ((err) => {
 			emitterIndex.emit('indexError', err);
 		})
 	
@@ -474,25 +485,25 @@ export function indexation(cacheArray: string[]) : EventEmitter {
 * #deepIndex : result of glob package (array of array).
 * #mergedIndex : transforminf array of array into a simple array.
 */
-function globCaches(pathsArray: string[]) : string[]{
+function globCaches (pathsArray : string[]) : string[] {
 
-	let deepIndex: any = [];
-	let mergedIndex: string[];
+	let deepIndex : any = [];
+	let mergedIndex : string[];
 
 	// checking that previousCacheDir content is an array
-	if (!Array.isArray(pathsArray)){
+	if (!Array.isArray(pathsArray)) {
 		logger.log('warning', 'previousCacheDir variable from config file is not an Array');
 		throw  'stop execution';
 
 	}
 	//checking if pathsArray contains some empty string. If yes, we do not considerate them.
-	if(pathsArray.includes('')){
+	if (pathsArray.includes('')) {
 		let indexToRemove = pathsArray.map((e, i) => e === "" ? i : '').filter(String);
 		pathsArray = pathsArray.filter(function(element){return element !== ''})
 	}
 
 	// finding pattern of jobID.json inside cache path
-	for (let element in pathsArray){
+	for (let element in pathsArray) {
 		deepIndex.push(glob.sync(pathsArray[element] + "/**/jobID\.json", {follow : true}));
 		logger.log('debug', `${deepIndex[element].length} jobID.json file(s) found in directory ${pathsArray[element]}`);
 	}
@@ -511,18 +522,18 @@ function globCaches(pathsArray: string[]) : string[]{
 * #uuidArray : array that contai all uuid find in one path.
 * #uuidDir : contain the last uuid of a uuidArray, that means it is the directory (uuid) that contains the jobID.json file.
 */
-function directorySearch(directoryPath: string): string{
+function directorySearch (directoryPath : string) : string {
 
 	let uuidregexV4 = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/ig
-	let uuidArray: any = directoryPath.match(uuidregexV4);
-	let uuidDir: any = null;
+	let uuidArray : any = directoryPath.match(uuidregexV4);
+	let uuidDir : any = null;
 
 	logger.log('debug', `list of all uuid pattern inside a jobID.json path \n ${JSON.stringify(uuidArray)}`);
 
-	if (uuidArray != null){
+	if (uuidArray != null) {
 		uuidDir = uuidArray.pop()  // retrieving the last element of uuidArray
 	}
-	else{
+	else {
 		logger.log('warning', `no uuid key found in: ${directoryPath}`);
 	}
 
@@ -536,18 +547,18 @@ function directorySearch(directoryPath: string): string{
 * @uuid : the uuid of the directory that contain the jobID.json file.
 * #file : content of a jobID.json file.
 */
-function extractDoc(path: string, uuid: string) : types.jobSerialInterface | null {
+function extractDoc (path : string, uuid : string) : types.jobSerialInterface | null {
 
-	let file: types.jobSerialInterface;
+	let file : types.jobSerialInterface;
 	
-	if (typeof(path) !== 'string'){
+	if (typeof(path) !== 'string') {
 		logger.log('warning', `path given is not a string type : \n ${path}`)
 	}
 
-	try{
+	try {
 		file = jsonfile.readFileSync(path);
 	}
-	catch(err){
+	catch (err) {
 		logger.log('warning', `while reading the json file ${path} : \n ${err}`);
 		return null;
 	}
@@ -571,39 +582,39 @@ function extractDoc(path: string, uuid: string) : types.jobSerialInterface | nul
 *			If elem is not an objMap type, we do the same thing without the "$in" structure
 * (4) : listener on testRequest function. This function accept the query builded with constraintsToQuery.
 */
-export function constraintsToQuery(constraints: types.jobSerialConstraints, either: boolean = false) : EventEmitter{
+export function constraintsToQuery (constraints : types.jobSerialConstraints, either : boolean = false) : EventEmitter {
 
 	let constEmitter : EventEmitter = new EventEmitter;
-	let query: types.query = {"selector": {}};
+	let query : types.query = {"selector": {}};
 	let strConstr = JSON.stringify(constraints);
-	let sel: any = query.selector;
+	let sel : any = query.selector;
 
-	if (strConstr === JSON.stringify({}) || strConstr === JSON.stringify([])){
-		let error: string = 'Empty constraints json or array given'
+	if (strConstr === JSON.stringify({}) || strConstr === JSON.stringify([])) {
+		let error : string = 'Empty constraints json or array given';
 		logger.log('warning', error);
-		constEmitter.emit('errorOnConstraints')
+		constEmitter.emit('errorOnConstraints');
 		return constEmitter;
 	} // (1)
 
-	if (!constraints){
-		let error: string = 'Constraints value is evaluated to false, maybe empty object or empty string'
+	if (!constraints) {
+		let error : string = 'Constraints value is evaluated to false, maybe empty object or empty string';
 		logger.log('warning', error);
-		constEmitter.emit('errorOnConstraints')
+		constEmitter.emit('errorOnConstraints');
 		return constEmitter;
 	} // (1)
 
-	if(either) sel["$or"] = [] // (2)
+	if (either) sel["$or"] = [] // (2)
 
 	Object.keys(constraints).map(elem => { //(3)
-		if(constraints[elem] === null){
-			if(!either) sel[elem] = {"$exists": true} // (3.1)
+		if (constraints[elem] === null) {
+			if (!either) sel[elem] = {"$exists": true} // (3.1)
 			return; // if constraints is null then we jump to the next iteration of the map => will return any value on this key
 		} 
 
-		if(types.isObjMap(constraints[elem])){ // (3.2)
+		if (types.isObjMap(constraints[elem])) { // (3.2)
 			either ? sel.$or.push({[elem]: {"$in": [constraints[elem]]}}) : sel[elem] = {"$in": [constraints[elem]]}
 		}
-		else{
+		else {
 			either ? sel.$or.push({[elem]: constraints[elem]}) : sel[elem] = constraints[elem]
 		}
 	});
@@ -612,10 +623,10 @@ export function constraintsToQuery(constraints: types.jobSerialConstraints, eith
 
 	dbMod.testRequest(query, nameDB, accountDB, passwordDB, addressDB, portDB, proxyBool).on('requestDone', (data) => { // (4)
 		
-		if(!data.docs.length) {
+		if (!data.docs.length) {
 			constEmitter.emit('noDocsFound', data)
 		}
-		else{
+		else {
 			constEmitter.emit('docsFound', data)
 		}
 	})
@@ -629,17 +640,17 @@ export function constraintsToQuery(constraints: types.jobSerialConstraints, eith
 * function storeJob that call addToDb function with a job.
 * @job : job that will store into the couchDB database.
 */
-export function storeJob(job: types.jobSerialInterface | types.jobSerialInterface[]): EventEmitter {
-	let storeEmitter: EventEmitter = new EventEmitter();
+export function storeJob (job : types.jobSerialInterface | types.jobSerialInterface[]) : EventEmitter {
+	let storeEmitter : EventEmitter = new EventEmitter();
 	dbMod.addToDB(job, nameDB, accountDB, passwordDB, addressDB, portDB, proxyBool)
-		.then(() => {
-			if (Array.isArray(job)){
+		.then (() => {
+			if (Array.isArray(job)) {
 				logger.log('success', `Insertion of ${job.length} jobID.json files in ${nameDB}`);
 			}
 			else logger.log('success', `Insertion of 1 jobID.json files in ${nameDB}`);
 			storeEmitter.emit('storeDone');
 		})
-		.catch((err) => {
+		.catch ((err) => {
 			storeEmitter.emit('storeError', err)
 		})
 	return storeEmitter;
@@ -663,7 +674,7 @@ if (program.dropdb) {
 	dropDB ()
 }
 else {
-	if(program.test){
+	if (program.test) {
 		// calling tests from ./test/tests.warehouse.js
 		warehouseTests ();
 	}

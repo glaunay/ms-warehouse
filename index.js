@@ -22,18 +22,18 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 // Required packages
 const child_process_1 = require("child_process");
+const program = require("commander");
 const EventEmitter = require("events");
 const fs = require("fs");
 const glob = require("glob");
 const jsonfile = require("jsonfile");
 const nanoDB = require("nano");
-const program = require("commander");
 // Required modules
 const dbMod = __importStar(require("./lib/db-module"));
-const server = require("./wh-server");
-const types = __importStar(require("./types/index"));
-const tests = require("./test/tests-warehouse");
 const logger_1 = require("./lib/logger");
+const tests = require("./test/tests-warehouse");
+const types = __importStar(require("./types/index"));
+const server = require("./wh-server");
 /*
 * Variable initialisation.
 * #index : false by default. Becomes true if user specifiec the indexation option.
@@ -46,7 +46,7 @@ let index = false;
 let dump = false;
 let dumpload = false;
 let pathConfig;
-let emitter = new EventEmitter();
+const emitter = new EventEmitter();
 let nameDB = "warehouse"; // default value
 let accountDB = "";
 let passwordDB = "";
@@ -61,16 +61,16 @@ let proxyBool = false;
 * Commander package that simplify the usage of commands line.
 */
 program
-    .option('-c, --config <path>', 'Load config file')
-    .option('-i, --index', 'Run indexation of cache directories')
-    .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', logger_1.setLogLevel)
-    .option('-d, --dump', 'Dump the database into json file after indexation')
-    .option('-l, --dumpload <path>', 'Load dump file from json file to construct the database')
-    .option('-t, --test', 'Run tests of the warehouse')
-    .option('-p, --noproxy', 'Start the microservice without the proxy (to make curl command working)')
-    .option('-x, --dropdb', 'Drop the database in config.json')
+    .option("-c, --config <path>", "Load config file")
+    .option("-i, --index", "Run indexation of cache directories")
+    .option("-v, --verbosity <logLevel>", "Set log level (debug, info, success, warning, error, critical)", logger_1.setLogLevel)
+    .option("-d, --dump", "Dump the database into json file after indexation")
+    .option("-l, --dumpload <path>", "Load dump file from json file to construct the database")
+    .option("-t, --test", "Run tests of the warehouse")
+    .option("-p, --noproxy", "Start the microservice without the proxy (to make curl command working)")
+    .option("-x, --dropdb", "Drop the database in config.json")
     .parse(process.argv);
-logger_1.logger.log('info', "\t\t***** Starting public Warehouse MicroService *****\n");
+logger_1.logger.log("info", "\t\t***** Starting public Warehouse MicroService *****\n");
 /*
 * This is an options check part.
 * 3 questions are asked:
@@ -83,7 +83,7 @@ logger_1.logger.log('info', "\t\t***** Starting public Warehouse MicroService **
 *	- if index (3)
 *		this option ask the program to run the indexation feature.
 */
-if (program.config && program.config != "") {
+if (program.config && program.config !== "") {
     pathConfig = program.config;
     try {
         configContent = jsonfile.readFileSync(pathConfig); // parsing config.file content // add try catch
@@ -115,57 +115,62 @@ if (program.dumpload)
 if (program.noproxy)
     proxyBool = true;
 // Checking config.json content
+// Every config.json property are required
 if (configContent.hasOwnProperty('accountDBName'))
     accountDB = configContent.accountDBName;
 else {
     logger_1.logger.log('warning', 'No "accountDBName" key found in config.json file');
-    throw "stop execution";
+    throw 'stop execution';
 }
 if (configContent.hasOwnProperty('password'))
     passwordDB = configContent.password;
 else {
     logger_1.logger.log('warning', 'No "password" key found in config.json file');
-    throw "stop execution";
+    throw 'stop execution';
 }
 if (configContent.hasOwnProperty('databaseName'))
     nameDB = configContent.databaseName;
 else {
     logger_1.logger.log('warning', 'No "databaseName" key found in config.json file');
-    throw "stop execution";
+    throw 'stop execution';
 }
 if (configContent.hasOwnProperty('databaseAddress'))
     addressDB = configContent.databaseAddress;
 else {
     logger_1.logger.log('warning', 'No "databaseAddress" key found in config.json file');
-    throw "stop execution";
+    throw 'stop execution';
 }
 if (configContent.hasOwnProperty('portCouch'))
     portDB = configContent.portCouch;
 else {
     logger_1.logger.log('warning', 'No "portCouch" key found in config.json file');
-    throw "stop execution";
+    throw 'stop execution';
 }
 if (configContent.hasOwnProperty('portExpress'))
     portExpress = configContent.portExpress;
 else {
     logger_1.logger.log('warning', 'No "portExpress" key found in config.json file');
-    throw "stop execution";
+    throw 'stop execution';
 }
 if (configContent.hasOwnProperty('portSocket'))
     portSocket = configContent.portSocket;
 else {
     logger_1.logger.log('warning', 'No "portSocket" key found in config.json file');
-    throw "stop execution";
+    throw 'stop execution';
 }
 if ((configContent.hasOwnProperty('warehouseAddress')))
     addressWarehouse = configContent.warehouseAddress;
 else {
     logger_1.logger.log('warning', 'No "warehouseAddress" key found in config.json file');
-    throw "stop execution";
+    throw 'stop execution';
 }
 let url = `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}`;
 logger_1.logger.log('info', `Connection to "${url}"`);
 let nano = nanoDB(url);
+/*
+* function warehouseTests that run the warehouse tests.
+* When all tests succeed, we clean the database to remove tests jobs.
+*/
 function warehouseTests() {
     tests.startTests().on('allTestsDone', () => {
         logger_1.logger.log('info', `Deleting tests documents in ${nameDB}...`);
@@ -351,6 +356,16 @@ emitter.on('created', () => {
         throw err;
     });
 });
+/*
+* function dumpingDatabase that create a json dump file of all the content of the database (name in config.json)
+* Using the curl command for this operation. If the "-p" flag is specified in command line, we construct the curl commande
+* without the proxy server.
+* @testDump : Only used by the test/tests-warehouse.js file. It allows the creation of a different file name for the tests.
+* #dumpEmitter : Event Emitter that emit two event "dumpDone" and "dumpFailed".
+* #wstream : Writable stream object.
+* #chunkRes : Result chunk from the stream (standard output).
+* #chunkError : Error chunk from the stream (standard error).
+*/
 function dumpingDatabase(testDump = false) {
     let dumpEmitter = new EventEmitter();
     let wstream;

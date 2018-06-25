@@ -9,13 +9,12 @@ const config = require('./config.json')
 import io = require('socket.io-client');
 // Required modules
 import * as types from './types/index';
-import {logger, setLogLevel} from './lib/logger';
+import { logger, setLogLevel } from './lib/logger';
 
-let portSocket: number = config.portSocket;
-let addressWarehouse: string = config.warehouseAddress;
-let urlSocket: string = `http://${addressWarehouse}:${portSocket}`
-//let urlSocket: string = `http://${addressDB}:${portSocket}`
 
+let portSocket : number = config.portSocket;
+let addressWarehouse : string = config.warehouseAddress;
+let urlSocket : string = `http://${addressWarehouse}:${portSocket}`
 
 /*
 * function push that send a message inside the socket connection to the warehouse server
@@ -23,7 +22,7 @@ let urlSocket: string = `http://${addressWarehouse}:${portSocket}`
 * #socket : socket client connection on adress.
 * #msg : message passed inside the socket connection, using the messageBuilder fonction
 */
-export function pushConstraints(constraints: types.jobSerialConstraints): EventEmitter {
+export function pushConstraints (constraints : types.jobSerialConstraints) : EventEmitter {
 	let emitterConstraints : EventEmitter = new EventEmitter();
 	let socket = io.connect(urlSocket);
 	let msg = messageBuilder(constraints, 'pushConstraints');
@@ -41,7 +40,7 @@ export function pushConstraints(constraints: types.jobSerialConstraints): EventE
 	return emitterConstraints;
 }
 
-export function storeJob(jobCompleted: types.jobSerialInterface): EventEmitter{
+export function storeJob (jobCompleted : types.jobSerialInterface) : EventEmitter {
 	let emitterStore : EventEmitter = new EventEmitter();
 	let socketStoreJob = io.connect(urlSocket);
 	let msg = messageBuilder(jobCompleted, 'storeJob', true);
@@ -58,7 +57,7 @@ export function storeJob(jobCompleted: types.jobSerialInterface): EventEmitter{
 	return emitterStore;
 }
 
-export function indexationRequest(pathArray: string[]): EventEmitter{
+export function indexationRequest (pathArray : string[]) : EventEmitter {
 	let emitterIndexation : EventEmitter = new EventEmitter();
 	let socketIndexation = io.connect(urlSocket);
 	let msg = messageBuilder(pathArray, 'indexation', false, true)
@@ -80,7 +79,7 @@ export function indexationRequest(pathArray: string[]): EventEmitter{
 * @constraints : constraints we want to be checked
 * @event : event type 
 */
-function messageBuilder(data: types.jobSerialConstraints | types.jobSerialInterface , event: string, store: boolean = false, index: boolean = false){
+function messageBuilder (data : types.jobSerialConstraints | types.jobSerialInterface , event : string, store : boolean = false, index : boolean = false) {
 	let message = {	'type' : store ? 'store' : index ? 'indexation' :  'request',
 				'value' : event,
 				'data' : data

@@ -1,6 +1,6 @@
 [
     {
-        "script": "/My/Path/To/My/Script/script10.sh",
+        "script": "/My/Path/To/My/Script/script.sh",
         "exportVar": { 
             "hexFlags": " -nocuda -ncpu 16 ",
             "hexScript": "/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"
@@ -14,7 +14,7 @@
         }
     },
     { 
-        "script": "/My/Path/To/My/Script/script11.sh",
+        "script": "/My/Path/To/My/Script/script.sh",
         "exportVar": { 
             "hexFlags": " -nocuda -ncpu 16 ",
             "hexScript": "/software/mobi/hex/8.1.1/exe/hex8.1.1.x64"

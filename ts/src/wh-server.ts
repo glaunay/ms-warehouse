@@ -14,7 +14,7 @@ import socketIo = require('socket.io');
 
 // Required modules
 import * as types from './types/index';
-import {logger, setLogLevel} from './lib/logger';
+import { logger, setLogLevel } from './lib/logger';
 import main = require('./index');
 
 // Initiate express and socket types
@@ -29,15 +29,15 @@ let io : SocketIO.Server = socketIo(server);
 */
 class packetManager {
 
-	socket: any;
-	_data: types.objMap;	
-	constructor(_socket: types.objMap){
+	socket : any;
+	_data : types.objMap;	
+	constructor (_socket: types.objMap) {
 		this.socket = _socket;
 		this._data = {};
 	}
 	// if content : setter, if not : getter
-	data(content?: types.objMap) {
-		if (!content){
+	data (content?: types.objMap) {
+		if (!content) {
 			return this._data;
 		}
 		this._data = content;
@@ -51,7 +51,7 @@ class packetManager {
 * #req.body : correspond to the json passed by the url from the client to this server.
 * #res.send : correspond to the response from the server to the request of the client
 */
-export let startServerExpress = function(port: number) : void{
+export let startServerExpress = function (port: number) : void {
 	app.use(parser.json({limit:1024102420, type:'application/json'}));
 	app.use(parser.urlencoded({limit: 1024102420, extended: true, parameterLimit:50000, type:'application/x-www-form-urlencoded'}));
 
@@ -84,7 +84,7 @@ export let startServerExpress = function(port: number) : void{
 	
 	// route /storeJob that request adding a complete job in the couchDB database
 	app.post('/storeJob', function (req: any, res: any) {
-		let msgExpress: types.msg = {
+		let msgExpress : types.msg = {
 			'type' : 'request',
 			'value' : 'express',
 			'data' : {}
@@ -117,13 +117,13 @@ export let startServerExpress = function(port: number) : void{
 * @port : socket connection listening on this port, default is 3125.
 * #packet : packetManager object, store socket and data informations.
 */
-export let startServerSocket = function(port: number) : EventEmitter{
+export let startServerSocket = function (port : number) : EventEmitter {
 	let emitterSocket : EventEmitter = new EventEmitter();
 	io.listen(port);
 	logger.log('info', `Running server on port ${port} for Socket connections`)
 	// on socket connection
 	io.on('connection', (socket: any) => {
-		let packet: packetManager = new packetManager(socket);
+		let packet : packetManager = new packetManager(socket);
 		logger.log('debug', `Client connected on port ${port}`);
 
 		socket.on('pushConstraints', (msgConst: types.msg) => {
@@ -146,16 +146,16 @@ export let startServerSocket = function(port: number) : EventEmitter{
 * @type : define the type of the event that occured inside the warehouse microservice
 * @packet : accept the packet as second argument and retriev only the data
 */
-export function push(type: string, packet: packetManager){
+export function push (type : string, packet : packetManager){
 
 	let msg = {	'type' : type != null ? 'results' : 'other',
 				'value' : type,
 				'data' : packet.data()
 	}
 	// emit unique event once the constraints request is done from the couchDB. returning results to client
-	if(type === 'find' || type === 'notFind' || type === 'errorConstraints') packet.socket.emit('resultsConstraints', msg);
-	if(type === 'success' || type === 'errorAddJob' || type === 'curlError') packet.socket.emit('addingResponse', msg);
-	if(type === 'indexSuccess' || type === 'indexFailed') packet.socket.emit('indexationResponse', msg);
+	if (type === 'find' || type === 'notFind' || type === 'errorConstraints') packet.socket.emit('resultsConstraints', msg);
+	if (type === 'success' || type === 'errorAddJob' || type === 'curlError') packet.socket.emit('addingResponse', msg);
+	if (type === 'indexSuccess' || type === 'indexFailed') packet.socket.emit('indexationResponse', msg);
 }
 
 

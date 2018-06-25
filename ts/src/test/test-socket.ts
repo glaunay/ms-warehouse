@@ -6,12 +6,12 @@
 
 import client = require('../wh-client')
 import * as types from '../types/index';
-import {logger, setLogLevel} from '../lib/logger';
+import { logger, setLogLevel } from '../lib/logger';
 
 logger.log('info',"\t\t***** Starting Warehouse features with Socket connections *****\n");
 
 // constraints for testing
-let constraints: types.jobSerialConstraints = {
+let constraints : types.jobSerialConstraints = {
 	"script": null, "scriptHash": "7b8459fdb1eee409262251c429c48814",
 	"inputHash": {
 		"file1.inp": "7726e41aaafd85054aa6c9d4747dec7b",
@@ -19,7 +19,7 @@ let constraints: types.jobSerialConstraints = {
 	}
 }
 
-let jobID_Test: types.jobSerialInterface = {
+let jobID_Test : types.jobSerialInterface = {
 	"script":"/Socket/Connection/Script.sh",
 	"exportVar": {
 		"hexFlags":" -nocuda -ncpu 16 ",
@@ -38,7 +38,7 @@ let jobID_Test: types.jobSerialInterface = {
 * function createJobByExpress that will check if job already exist inside the coiuchDB database before creating it.
 * @constraints : constraints we want to check
 */
-function createJobBySocket(constraints: types.jobSerialConstraints){
+function createJobBySocket (constraints : types.jobSerialConstraints) : void {
 	client.pushConstraints(constraints);
 }
 
@@ -47,7 +47,7 @@ function createJobBySocket(constraints: types.jobSerialConstraints){
 * @data : data to store
 * NOT IMPLEMENTED YET
 */
-function onJobComp(data: types.jobSerialInterface) {
+function onJobComp (data : types.jobSerialInterface) : void {
 	client.storeJob(jobID_Test);
 }
 

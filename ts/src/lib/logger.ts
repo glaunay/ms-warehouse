@@ -15,38 +15,6 @@
 * - win.logger.log('DEBUG', <text>)         - Lower level of logger, debug mode
 */
 
-// import win = require('winston');
-
-// var levelMin = 'INFO';
-
-// // exporting levels of logger. Useful to compare opption in command lines with thos levels.
-// export var levels = {
-//        'CRITICAL': 0,
-//        'ERROR': 1,
-//        'WARNING': 2,
-//        'SUCCESS': 3,
-//        'INFO': 4,
-//        'DEBUG': 5
-//    }
-// // exporting colors of the logger.
-// export var colors = {
-//        'CRITICAL': 'red',
-//        'ERROR': 'magenta',
-//        'WARNING': 'yellow',
-//        'SUCCESS': 'green',
-//        'INFO': 'cyan',
-//        'DEBUG': 'blue'
-//    }
-// // exporting logger variable, that contain the levels, colors, and levelMin attribute.
-// export var logger = new (win.Logger)({levels, colors, level: levelMin,
-//    transports: [
-//        new (win.transports.Console)({
-//            colorize: true
-//        })
-//    ]
-// });
-
-
 import logger = require('winston');
 
 logger.setLevels({
@@ -71,13 +39,12 @@ logger.add(logger.transports.Console, { level: 'info', colorize:true });
 //logger.add(logger.transports.File, { filename: "./logs/devel.log" });
 
 type logLvl = 'debug'|'info'|'success'|'warning'|'error'|'critical';
-function isLogLvl(value:string): value is logLvl {
+function isLogLvl (value:string) : value is logLvl {
     return value === 'debug' || value === 'info' || value === 'success' || value === 'warning'
     || value === 'error' || value === 'critical';
 }
-export function setLogLevel(value:string):void {
-    if(!isLogLvl(value))
-        throw `Unrecognized logLvel "${value}"`;
+export function setLogLevel (value : string) : void {
+    if (!isLogLvl(value)) throw `Unrecognized logLvel "${value}"`;
     logger.level = value;
 }
 

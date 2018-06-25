@@ -9,34 +9,34 @@ import splitArray = require('split-array');
 import { spawn } from 'child_process';
 // Required modules
 import * as types from '../types/index';
-import {logger, setLogLevel} from '../lib/logger';
+import { logger, setLogLevel } from '../lib/logger';
 
 
 /*
 * Function that accept a query and request couchDb with nano structure.
 * @query : mango query is required to be accepted by couchDb 
 */
-export function testRequest(query: types.query, nameDB: string, accountName: string, passwordDB: string, addressDB: string, portDB: number, proxyBool: boolean): EventEmitter{
+export function testRequest (query : types.query, nameDB : string, accountName : string, passwordDB : string, addressDB : string, portDB : number, proxyBool : boolean) : EventEmitter {
 	let reqEmitter : EventEmitter = new EventEmitter();
 	let chunkRes = '';
 	let chunkError = '';
-	let curl: any;
-	if (proxyBool){
+	let curl : any;
+	if (proxyBool) {
 		curl = spawn('curl', ['--noproxy',`${addressDB}`,'-s','-S','-H', 'Content-Type:application/json','-H','charset=utf-8','-d', `${JSON.stringify(query)}`, '-X', 'POST', `http://${accountName}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_find`])
 	}
 	else {
 		curl = spawn('curl', ['-s','-S','-H', 'Content-Type:application/json','-H','charset=utf-8','-d', `${JSON.stringify(query)}`, '-X', 'POST', `http://${accountName}:${passwordDB}@${addressDB}:${portDB}/${nameDB}/_find`])
 	}
 
-	curl.stdout.on('data', (data: any) => {
+	curl.stdout.on('data', (data : any) => {
 		chunkRes += data.toString('utf8');
 	})
 
-	curl.stderr.on('data', (data: any) => {
+	curl.stderr.on('data', (data : any) => {
 		chunkError += data.toString('utf8');
 	})
 
-	curl.on('close', (code: any) => {
+	curl.on('close', (code : any) => {
 
 		let jsonChunkRes = JSON.parse(chunkRes);
 		
@@ -44,7 +44,7 @@ export function testRequest(query: types.query, nameDB: string, accountName: str
 			logger.log('error', 'Insertion from jobID.json file in database \n' + chunkError);
 			reqEmitter.emit('curlError', chunkError);
 		}
-		else{
+		else {
 			reqEmitter.emit('requestDone', jsonChunkRes )
 		}
 	})
@@ -61,11 +61,11 @@ export function testRequest(query: types.query, nameDB: string, accountName: str
 * #arrayData : If data length is higher than 500, we split array into array of 500 with the arraySplit function.
 * #addObj : addData class object, we use await before next iteration of the loop. 
 */
-export async function addToDB (data: types.jobSerialInterface | types.jobSerialInterface[], nameDB: string, accountName: string, passwordDB: string, addressDB: string, portDB: number, proxyBool: boolean) : Promise<any> {
-	let docList: types.jobSerialInterface[] = Array.isArray(data) ? data : [data];
-	let arrayData:any[] = docList.length > 500 ? arraySplit(docList, 500) : docList;
+export async function addToDB (data : types.jobSerialInterface | types.jobSerialInterface[], nameDB : string, accountName : string, passwordDB : string, addressDB : string, portDB : number, proxyBool : boolean) : Promise<any> {
+	let docList : types.jobSerialInterface[] = Array.isArray(data) ? data : [data];
+	let arrayData : any[] = docList.length > 500 ? arraySplit(docList, 500) : docList;
 	for (let elem of arrayData) {
-		let addObj: addData = new addData(elem, nameDB, accountName, passwordDB, addressDB, portDB, proxyBool);
+		let addObj : addData = new addData(elem, nameDB, accountName, passwordDB, addressDB, portDB, proxyBool);
 		await addObj.three_curl()
 	};
 }
@@ -76,9 +76,9 @@ export async function addToDB (data: types.jobSerialInterface | types.jobSerialI
 * @number : define the length of the splitted array
 * #array : array returned by the function, this an array of array of number variable length. 
 */
-function arraySplit(arrayToSplit: types.jobSerialInterface[], number: number): types.jobSerialInterface[][]{
+function arraySplit (arrayToSplit : types.jobSerialInterface[], number : number) : types.jobSerialInterface[][] {
 
-	let array: types.jobSerialInterface[][] = splitArray(arrayToSplit, number);
+	let array : types.jobSerialInterface[][] = splitArray(arrayToSplit, number);
 	return array;
 }
 
@@ -106,18 +106,18 @@ function arraySplit(arrayToSplit: types.jobSerialInterface[], number: number): t
 * (6) : if checkEqual is true and result array element contains true (to avoid the "true" result from checkEqual if result array containing only false value)
 * (7) : _curl function recursive call.
 */
-class addData extends EventEmitter{
-	docList: types.jobSerialInterface[];
-	nameDB: string;
-	accountName: string;
-	passwordDB: string;
-	addressDB: string;
-	portDB: number;
-	proxyBool: boolean;
-	chunkRes: string;
-	chunkError: string;
+class addData extends EventEmitter {
+	docList : types.jobSerialInterface[];
+	nameDB : string;
+	accountName : string;
+	passwordDB : string;
+	addressDB : string;
+	portDB : number;
+	proxyBool : boolean;
+	chunkRes : string;
+	chunkError : string;
 	
-	constructor(_docList: types.jobSerialInterface[], _nameDB: string, _accountName: string, _passwordDB: string, _addressDB: string, _portDB: number, _proxyBool: boolean){
+	constructor (_docList : types.jobSerialInterface[], _nameDB : string, _accountName : string, _passwordDB : string, _addressDB : string, _portDB : number, _proxyBool : boolean) {
 		super();
 		this.docList = _docList;
 		this.nameDB = _nameDB;
@@ -128,12 +128,12 @@ class addData extends EventEmitter{
 		this.proxyBool = _proxyBool;
 		this.chunkRes = '';
 		this.chunkError = '';
-		let self: addData = this;
+		let self : addData = this;
 	}
 	/*
 	* Function that will try 3 times to insert data into couchDB
 	*/
-	async three_curl(){
+	async three_curl() {
 		let self = this
 		let p = new Promise((resolve, reject) => {
 			self._curl()
@@ -159,13 +159,13 @@ class addData extends EventEmitter{
 		return p;
 	}
 
-	async _curl(): Promise<any> {
-		let self: addData = this;
-		let p: any = new Promise((resolve, reject) => {
+	async _curl() : Promise<any> {
+		let self : addData = this;
+		let p : any = new Promise((resolve, reject) => {
 			Array.isArray(self.docList) ? self.docList : self.docList = [self.docList];
-			let curl: any;
+			let curl : any;
 			// (1)
-			if (self.proxyBool){
+			if (self.proxyBool) {
 				curl = spawn('curl', ['--noproxy',`${self.addressDB}`,'-s','-S','-H', 'Content-Type:application/json','-d', `{"docs": ${JSON.stringify(self.docList)}}`, '-X', 'POST', `http://${self.accountName}:${self.passwordDB}@${self.addressDB}:${self.portDB}/${self.nameDB}/_bulk_docs`]);
 			}
 			else {
@@ -173,18 +173,18 @@ class addData extends EventEmitter{
 			}
 
 			// (2)
-			curl.stdout.on('data', (data: any) => {
+			curl.stdout.on('data', (data : any) => {
 				self.chunkRes += data.toString('utf8');
 
 			});
 
 			// (2)
-			curl.stderr.on('data', (data: any) => {
+			curl.stderr.on('data', (data : any) => {
 				self.chunkError += data.toString('utf8');
 			});
 
 			// (3)
-			curl.on('close', (code: any) => {
+			curl.on('close', (code : any) => {
 				let jsonChunkRes = eval(self.chunkRes);
 
 				if (self.chunkError.length > 0) {
@@ -192,20 +192,20 @@ class addData extends EventEmitter{
 				}
 				else{
 					// (4)
-					let result: any[] = jsonChunkRes.map(function(elem: any){
+					let result : any[] = jsonChunkRes.map(function(elem: any) {
 						return elem["ok"] === true;
 					})
 					// (5)
-					let checkEqual: boolean = true;
-					for(let elem of result){
-						if (result[0] !== elem){
+					let checkEqual : boolean = true;
+					for (let elem of result) {
+						if (result[0] !== elem) {
 							checkEqual = false;
 							break;
 						}
 					}
 
 					// (6)
-					if(checkEqual && result[0] === true){
+					if (checkEqual && result[0] === true) {
 						resolve();
 					}
 					// (7)

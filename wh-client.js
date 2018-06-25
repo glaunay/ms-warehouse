@@ -12,7 +12,6 @@ const logger_1 = require("./lib/logger");
 let portSocket = config.portSocket;
 let addressWarehouse = config.warehouseAddress;
 let urlSocket = `http://${addressWarehouse}:${portSocket}`;
-//let urlSocket: string = `http://${addressDB}:${portSocket}`
 /*
 * function push that send a message inside the socket connection to the warehouse server
 * @constraints : constraints send to the warehouse for checking.

@@ -10,12 +10,6 @@ const request = require("request");
 const config = require('../config.json');
 const logger_1 = require("../lib/logger");
 logger_1.logger.log('info', "\t\t***** Starting Warehouse features with HTTP connections *****\n");
-// // Commander package part
-// program
-//   .option('-v, --verbosity <logLevel>', 'Set log level (debug, info, success, warning, error, critical)', setLogLevel)
-//   .option('-x, --express <port>', 'Specified the port for express connection', 7687)
-//   .option('-u, --urlserver <address>', 'Specified the warehouse server url, default is "http://localhost"', "http://localhost")
-//   .parse(process.argv);
 let portExpress = config.portExpress;
 let addressWarehouse = config.warehouseAddress;
 let urlExpress = `http://${addressWarehouse}:${portExpress}`;

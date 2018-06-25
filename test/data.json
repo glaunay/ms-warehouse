@@ -1,4 +1,4 @@
-{"docs":[
+[
     {
         "script": "/My/Path/To/My/Script/script.sh",
         "exportVar": { 
@@ -28,4 +28,4 @@
             "file3.inp": "694ed249-e494-4f23-9c25-541515b17d38"
         }
     }
-]}
+]

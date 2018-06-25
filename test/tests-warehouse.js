@@ -10,8 +10,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // Required packages
 const jsonfile = require("jsonfile");
 const EventEmitter = require("events");
-const index = __importStar(require("../index"));
 const child_process_1 = require("child_process");
+const index = __importStar(require("../index"));
 const logger_1 = require("../lib/logger");
 let dataToIndex = ["./test/cache_Dir_1", "./test/cache_Dir_2", "./test/cache_Dir_3"];
 // Imitate a job content that will be insert in database
