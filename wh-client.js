@@ -15,6 +15,7 @@ let emetTest = new EventEmitter();
 let portSocket = config.portSocket;
 let addressWarehouse = config.warehouseAddress;
 let urlSocket = `http://${addressWarehouse}:${portSocket}`;
+let dbName = config.databaseName;
 // export interface jobFootprint {
 //     workDir: string,
 //     exportVar? : cType.stringMap,
@@ -36,14 +37,12 @@ function pushConstraints(constraints) {
     })
         .on('resultsConstraints', (messageResults) => {
         logger_1.logger.log('info', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
-        console.log('-----------------------------------------------------');
-        console.log(JSON.stringify(messageResults));
-        console.log('-----------------------------------------------------');
         // add condition for the existence of workDir?
         //if (obj1.hasOwnProperty('workDir')) console.log('toto')
         if (messageResults.value === 'found') {
             let workPath = messageResults.data[0].workDir;
             fStdout_fSterr_Check(workPath).on('checkOK', (nameOut, nameErr) => {
+                logger_1.logger.log('success', `Found ${messageResults.data.length} jobs traces in ${dbName}`);
                 emitterConstraints.emit('foundDocs', nameOut, nameErr, workPath);
             })
                 .on('checkNotOK', () => {

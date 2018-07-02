@@ -15,9 +15,10 @@ import { logger, setLogLevel } from './lib/logger';
 
 let emetTest: EventEmitter = new EventEmitter();
 
-let portSocket : number = config.portSocket;
-let addressWarehouse : string = config.warehouseAddress;
-let urlSocket : string = `http://${addressWarehouse}:${portSocket}`
+let portSocket: number = config.portSocket;
+let addressWarehouse: string = config.warehouseAddress;
+let urlSocket: string = `http://${addressWarehouse}:${portSocket}`;
+let dbName: string = config.databaseName;
 
 
 // export interface jobFootprint {
@@ -43,14 +44,12 @@ export function pushConstraints (constraints : types.jobSerialConstraints) : Eve
 	})
 	.on('resultsConstraints', (messageResults: types.msg) => {
 		logger.log('info', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
-		console.log('-----------------------------------------------------')
-		console.log(JSON.stringify(messageResults))
-		console.log('-----------------------------------------------------')
 		// add condition for the existence of workDir?
 		//if (obj1.hasOwnProperty('workDir')) console.log('toto')
 		if (messageResults.value === 'found') {
 			let workPath : string = messageResults.data[0].workDir;
 			fStdout_fSterr_Check(workPath).on('checkOK', (nameOut: string, nameErr: string) => {
+				logger.log('success', `Found ${messageResults.data.length} jobs traces in ${dbName}`)
 				emitterConstraints.emit('foundDocs', nameOut, nameErr, workPath);
 			})
 			.on('checkNotOK', () => {
