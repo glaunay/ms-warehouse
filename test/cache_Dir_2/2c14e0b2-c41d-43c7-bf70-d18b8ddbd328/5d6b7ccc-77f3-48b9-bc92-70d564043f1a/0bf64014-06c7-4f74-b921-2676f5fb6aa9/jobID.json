@@ -1,4 +1,5 @@
-{
+{	
+	"workDir": "/My/Path/To/Work/Directory",
 	"script":"/My/Path/To/My/Script/script.sh",
 	"exportVar": {
 		"hexFlags":" -nocuda -ncpu 16 ",

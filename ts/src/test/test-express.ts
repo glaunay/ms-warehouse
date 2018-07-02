@@ -28,6 +28,7 @@ let constraints : types.jobSerialConstraints = {
 }
 
 let jobID_Test : types.jobSerialInterface = {
+	"workDir": "/My/Path/To/Work/Directory",
 	"script":"/Users/vreymond/Stage/Projet/ms-warehouse/run_hex.sh",
 	"exportVar": {
 		"hexFlags":" -nocuda -ncpu 16 ",

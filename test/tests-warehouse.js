@@ -16,6 +16,7 @@ const logger_1 = require("../lib/logger");
 let dataToIndex = ["./test/cache_Dir_1", "./test/cache_Dir_2", "./test/cache_Dir_3"];
 // Imitate a job content that will be insert in database
 let dataToAdd = {
+    "workDir": "/My/Path/To/Work/Directory",
     "script": "/My/Path/To/My/Script/script.sh",
     "exportVar": {
         "hexFlags": " -nocuda -ncpu 16 ",

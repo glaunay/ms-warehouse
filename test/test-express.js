@@ -21,6 +21,7 @@ let constraints = {
     },
 };
 let jobID_Test = {
+    "workDir": "/My/Path/To/Work/Directory",
     "script": "/Users/vreymond/Stage/Projet/ms-warehouse/run_hex.sh",
     "exportVar": {
         "hexFlags": " -nocuda -ncpu 16 ",

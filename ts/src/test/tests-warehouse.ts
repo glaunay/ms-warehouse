@@ -13,6 +13,7 @@ let dataToIndex : string[] = ["./test/cache_Dir_1", "./test/cache_Dir_2", "./tes
 
 // Imitate a job content that will be insert in database
 let dataToAdd : types.jobSerialInterface = {
+		"workDir": "/My/Path/To/Work/Directory",
 		"script": "/My/Path/To/My/Script/script.sh",
 		"exportVar": { 
 			"hexFlags": " -nocuda -ncpu 16 ",

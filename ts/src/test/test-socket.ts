@@ -12,7 +12,6 @@ logger.log('info',"\t\t***** Starting Warehouse features with Socket connections
 
 // constraints for testing
 let constraints : types.jobSerialConstraints = {
-	"workDir": "/path/test/toto/tata/titi",
 	"script": null, "scriptHash": "7b8459fdb1eee409262251c429c48814",
 	"inputHash": {
 		"file1.inp": "7726e41aaafd85054aa6c9d4747dec7b",
@@ -21,7 +20,7 @@ let constraints : types.jobSerialConstraints = {
 }
 
 let jobID_Test : types.jobSerialInterface = {
-	"workDir": "/path/test/toto/tata/titi",
+	"workDir": "/My/Path/To/Work/Directory",
 	"script":"/Socket/Connection/Script.sh",
 	"exportVar": {
 		"hexFlags":" -nocuda -ncpu 16 ",
