@@ -6,6 +6,8 @@
 
 MS-Warehouse is a MicroService (MS) which stores pipelines and jobs traces into a NoSQL database (couchDB), when a job is completed. Before the creation of a job, you can request the warehouse MS to check if any instance of this job (results) already exists inside the database. Once this job is found, the warehouse will bring back the job to the client. 
 
+
+
 ### Goals
 The job-warehouse MS has to know all the previous and actual existing pipelines (their topology and their tasks). Moreover, is has to store all the previous and actual existing tasks (their "ID card", their working directory and their status). For more informations about pipelines and tasks, see the [Pipelines and tasks](#pipelines-and-tasks) section.
 
@@ -272,8 +274,19 @@ node test/test-express.js
 
 ## API of MS-Warehouse
 
-This part will describe the API of the micro-service Warehouse
+This part will describe the API of the micro-service Warehouse. This API give the two main features of the Warehouse, the job trace check and the storage of job trace
 
+## Deployment local / server
+
+|:arrow\_down: Local \ Server :arrow\_right:| Pipeline | Job-Manager | Warehouse|
+| --- | --- | --- | --- |
+| **Pipeline** | :heavy\_minus\_sign:| | :heavy\_minus\_sign: |
+| **Job-manager**     | |:heavy\_minus\_sign:|
+| **Warehouse**     | :heavy\_minus\_sign: |        | :heavy\_minus\_sign:|
+
+:heavy\_minus\_sign:  
+:white\_check\_mark:  
+:x:
 
 # Contributors
 
