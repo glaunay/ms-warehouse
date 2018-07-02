@@ -30,13 +30,13 @@ let io : SocketIO.Server = socketIo(server);
 class packetManager {
 
 	socket : any;
-	_data : types.objMap;	
-	constructor (_socket: types.objMap) {
+	_data : types.stringMap;	
+	constructor (_socket: types.stringMap) {
 		this.socket = _socket;
 		this._data = {};
 	}
 	// if content : setter, if not : getter
-	data (content?: types.objMap) {
+	data (content?: types.stringMap) {
 		if (!content) {
 			return this._data;
 		}
@@ -153,7 +153,7 @@ export function push (type : string, packet : packetManager){
 				'data' : packet.data()
 	}
 	// emit unique event once the constraints request is done from the couchDB. returning results to client
-	if (type === 'find' || type === 'notFind' || type === 'errorConstraints') packet.socket.emit('resultsConstraints', msg);
+	if (type === 'found' || type === 'notFound' || type === 'errorConstraints') packet.socket.emit('resultsConstraints', msg);
 	if (type === 'success' || type === 'errorAddJob' || type === 'curlError') packet.socket.emit('addingResponse', msg);
 	if (type === 'indexSuccess' || type === 'indexFailed') packet.socket.emit('indexationResponse', msg);
 }

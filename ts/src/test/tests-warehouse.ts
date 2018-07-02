@@ -88,12 +88,12 @@ function checkConstraints (constraints : types.jobSerialConstraints) : EventEmit
 	let emitterConst : EventEmitter = new EventEmitter();
 
 	logger.log('info',`Looking for constraints in database... \n ${JSON.stringify(dataConstraints)}`)
-	index.constraintsCall(constraints, 'test').on('testSucceed', (docsArray: types.objMap[])=> {
+	index.constraintsCall(constraints, 'test').on('testSucceed', (docsArray: types.stringMap[])=> {
 		logger.log('info', `${JSON.stringify(docsArray)}`)
 		logger.log('success', '----> OK\n\n');
 		emitterConst.emit('checkSuccess');
 	})
-	.on('testNoResults', (docsArray : types.objMap[]) => {
+	.on('testNoResults', (docsArray : types.stringMap[]) => {
 		logger.log('error', '----> NOT OK (As expected)\n\n');
 		emitterConst.emit('checkFail')
 	})

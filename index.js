@@ -313,11 +313,11 @@ emitter.on('created', () => {
             constraintsCall(packet.data(), 'socket')
                 .on('socketSucceed', (docsArray) => {
                 packet.data(docsArray);
-                server.push('find', packet = packet);
+                server.push('found', packet = packet);
             })
                 .on('socketNoResults', (docsArray) => {
                 packet.data(docsArray);
-                server.push('notFind', packet = packet);
+                server.push('notFound', packet = packet);
             })
                 .on('socketFailed', (error) => {
                 packet.data(error);
@@ -551,10 +551,10 @@ function extractDoc(path, uuid) {
 * (3) : query builder using a map function. "$and" and "$eq" are implicit here, we dont necessary need those operande to build the query.
 * 	(3.1) : If strict equality (either = false), we want to ckeck if a constraints with a value null exists in the doc. If not, the doc is
 *			not returned.
-*	(3.2) : When a constraints value is equal to an objMap. 2 possibilities:
+*	(3.2) : When a constraints value is equal to an stringMap. 2 possibilities:
 *				- If either, then adding a "$in" structure inside the "$or" array
 *				- Else, simply add the "$in" structure inside the "elem" (constraints) key
-*			If elem is not an objMap type, we do the same thing without the "$in" structure
+*			If elem is not an stringMap type, we do the same thing without the "$in" structure
 * (4) : listener on testRequest function. This function accept the query builded with constraintsToQuery.
 */
 function constraintsToQuery(constraints, either = false) {
@@ -582,7 +582,7 @@ function constraintsToQuery(constraints, either = false) {
                 sel[elem] = { "$exists": true }; // (3.1)
             return; // if constraints is null then we jump to the next iteration of the map => will return any value on this key
         }
-        if (types.isObjMap(constraints[elem])) {
+        if (types.isStringMap(constraints[elem])) {
             either ? sel.$or.push({ [elem]: { "$in": [constraints[elem]] } }) : sel[elem] = { "$in": [constraints[elem]] };
         }
         else {
@@ -625,7 +625,6 @@ function storeJob(job) {
     return storeEmitter;
 }
 exports.storeJob = storeJob;
-// Remove?
 emitter.on('indexDone', () => {
     logger_1.logger.log('info', 'Indexation succeed properly');
 })

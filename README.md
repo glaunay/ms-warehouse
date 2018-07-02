@@ -94,7 +94,6 @@ Those following instructions allows you to install properly the warehouse MS.
 
 ```javascript
 npm install
-// Your password is required (a global package will be installed, couchdb-dump)
 ```
 
 2) Compile TypeScript files to generate javaScript files. Move to the root of the program `./ms-warehouse` before run the TypeScript compiler.

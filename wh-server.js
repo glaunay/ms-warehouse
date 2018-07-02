@@ -133,7 +133,7 @@ function push(type, packet) {
         'data': packet.data()
     };
     // emit unique event once the constraints request is done from the couchDB. returning results to client
-    if (type === 'find' || type === 'notFind' || type === 'errorConstraints')
+    if (type === 'found' || type === 'notFound' || type === 'errorConstraints')
         packet.socket.emit('resultsConstraints', msg);
     if (type === 'success' || type === 'errorAddJob' || type === 'curlError')
         packet.socket.emit('addingResponse', msg);
