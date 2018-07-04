@@ -5,7 +5,7 @@
 import { logger, setLogLevel } from "../lib/logger";
 
 // stringMap type interface
-export interface stringMap { [s: string] : string; }
+export interface stringMap { [s: string] : any; }
 
 export function isStringMap (obj: any): obj is stringMap {
     if (typeof(obj) != 'object') return false;

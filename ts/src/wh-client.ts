@@ -34,11 +34,12 @@ export function pushConstraints (constraints : types.jobSerialConstraints) : Eve
 		socket.emit('pushConstraints', msg);
 	})
 	.on('resultsConstraints', (messageResults: types.msg) => {
-		logger.log('info', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
 		// add condition for the existence of workDir?
 		//if (obj1.hasOwnProperty('workDir')) console.log('toto')
 		if (messageResults.value === 'found') {
-			let workPath : string = messageResults.data[0].workDir;
+			logger.log('success', `Job trace found in Warehouse`);
+			logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
+			let workPath = messageResults.data[0].workDir;
 			fStdout_fSterr_Check(workPath).on('checkOK', (nameOut: string, nameErr: string) => {
 				logger.log('success', `Found ${messageResults.data.length} jobs traces`)
 				emitterConstraints.emit('foundDocs', nameOut, nameErr, workPath);
@@ -48,7 +49,11 @@ export function pushConstraints (constraints : types.jobSerialConstraints) : Eve
 			})
 		};
 
-		if (messageResults.value === 'notFound') emitterConstraints.emit('notFoundDocs', messageResults);
+		if (messageResults.value === 'notFound') {
+			logger.log('info', `Job trace not found in Warehouse`);
+			logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
+			emitterConstraints.emit('notFoundDocs', messageResults);
+		}
 		if (messageResults.value === 'errorConstraints') emitterConstraints.emit('errorDocs', messageResults);
 	})
 	return emitterConstraints;
@@ -156,7 +161,7 @@ export function handshake (param: types.clientConfig = config): Promise<any> {
 		let connectBool: boolean = false;
 
 		if (types.isClientConfig(param)){
-			logger.log('info', `Client config file perfectly loaded`);
+			logger.log('success', `Client config file perfectly loaded`);
 			logger.log('debug', `Config file content: \n ${JSON.stringify(param)}`)
 			portSocket = param.portSocket;
 			addressWarehouse = param.warehouseAddress;
