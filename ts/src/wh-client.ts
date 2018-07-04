@@ -37,7 +37,7 @@ export function pushConstraints (constraints : types.jobSerialConstraints) : Eve
 		// add condition for the existence of workDir?
 		//if (obj1.hasOwnProperty('workDir')) console.log('toto')
 		if (messageResults.value === 'found') {
-			logger.log('success', `Job trace found in Warehouse`);
+			logger.log('info', `Job trace found in Warehouse`);
 			logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
 			let workPath = messageResults.data[0].workDir;
 			fStdout_fSterr_Check(workPath).on('checkOK', (nameOut: string, nameErr: string) => {
@@ -71,7 +71,7 @@ export function storeJob (jobCompleted : any) : EventEmitter {
 		socketStoreJob.emit('storeJob', msg);
 	})
 	.on('addingResponse', (messageRes: types.msg) => {
-		logger.log('success', `Job footprint stored in Warehouse`)
+		logger.log('info', `Job footprint stored in Warehouse`)
 		//logger.log('info', `Message receive from server (add job request) \n ${JSON.stringify(messageRes)}`);
 		logger.log('debug', `Message returned: \n ${JSON.stringify(messageRes)}`);
 		
@@ -161,7 +161,7 @@ export function handshake (param: types.clientConfig = config): Promise<any> {
 		let connectBool: boolean = false;
 
 		if (types.isClientConfig(param)){
-			logger.log('success', `Client config file perfectly loaded`);
+			logger.log('info', `Client config paramaters perfectly loaded`);
 			logger.log('debug', `Config file content: \n ${JSON.stringify(param)}`)
 			portSocket = param.portSocket;
 			addressWarehouse = param.warehouseAddress;
