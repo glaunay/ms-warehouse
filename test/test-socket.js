@@ -5,9 +5,19 @@
     Then, the client will send the constraints to the server through the socket connection.
 */
 Object.defineProperty(exports, "__esModule", { value: true });
+const program = require("commander");
 const client = require("../wh-client");
 const logger_1 = require("../lib/logger");
-logger_1.logger.log('info', "\t\t***** Starting Warehouse features with Socket connections *****\n");
+program
+    .option("-a, --address <address>", "Warehouse address")
+    .option("-p, --port <port>", "Warehouse socket port")
+    .option("-v, --verbosity <logLevel>", "Set log level (debug, info, success, warning, error, critical)", logger_1.setLogLevel)
+    .parse(process.argv);
+logger_1.logger.log('info', "\t\t***** Starting Socket connections tests *****\n");
+let paramBuild = {
+    "warehouseAddress": program.address ? program.address : "localhost",
+    "portSocket": program.port ? Number.isInteger(Number(program.port)) ? Number(program.port) : 7688 : 7688
+};
 // constraints for testing
 let constraints = {
     "script": null, "scriptHash": "7b8459fdb1eee409262251c429c48814",
@@ -36,6 +46,8 @@ let jobID_Test = {
 * @constraints : constraints we want to check
 */
 function createJobBySocket(constraints) {
+    logger_1.logger.log('info', `Checking job trace in Warehouse from constraints...`);
+    logger_1.logger.log('debug', `Constraints:\n ${JSON.stringify(constraints)}`);
     client.pushConstraints(constraints);
 }
 /*
@@ -46,5 +58,11 @@ function createJobBySocket(constraints) {
 function onJobComp(data) {
     client.storeJob(jobID_Test);
 }
-createJobBySocket(constraints);
-onJobComp(jobID_Test);
+client.handshake(paramBuild).then((bool) => {
+    logger_1.logger.log('info', `Connection with Warehouse server succeed, starting tests...\n`);
+    createJobBySocket(constraints);
+    onJobComp(jobID_Test);
+})
+    .catch((bool) => {
+    logger_1.logger.log('warning', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
+});

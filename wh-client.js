@@ -1,4 +1,11 @@
 "use strict";
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+}
 Object.defineProperty(exports, "__esModule", { value: true });
 /*
     Client of the warehouse.
@@ -7,21 +14,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // Required packages
 const EventEmitter = require("events");
 const pathExists = require("path-exists");
-const config = require('./config.json');
+const config = require('./config-client.json');
 const io = require("socket.io-client");
 const path = require("path");
+// Required modules
+const types = __importStar(require("./types/index"));
 const logger_1 = require("./lib/logger");
 let emetTest = new EventEmitter();
-let portSocket = config.portSocket;
-let addressWarehouse = config.warehouseAddress;
-let urlSocket = `http://${addressWarehouse}:${portSocket}`;
-let dbName = config.databaseName;
-// export interface jobFootprint {
-//     workDir: string,
-//     exportVar? : cType.stringMap,
-//     scriptHash: string,
-//     inputHash? : cType.stringMap
-// }
+let portSocket;
+let addressWarehouse;
+let urlSocket;
 /*
 * function push that send a message inside the socket connection to the warehouse server
 * @constraints : constraints send to the warehouse for checking.
@@ -42,7 +44,7 @@ function pushConstraints(constraints) {
         if (messageResults.value === 'found') {
             let workPath = messageResults.data[0].workDir;
             fStdout_fSterr_Check(workPath).on('checkOK', (nameOut, nameErr) => {
-                logger_1.logger.log('success', `Found ${messageResults.data.length} jobs traces in ${dbName}`);
+                logger_1.logger.log('success', `Found ${messageResults.data.length} jobs traces`);
                 emitterConstraints.emit('foundDocs', nameOut, nameErr, workPath);
             })
                 .on('checkNotOK', () => {
@@ -143,3 +145,30 @@ function fStdout_fSterr_Check(workDir) {
     });
     return emitterCheck;
 }
+// Function handshake that test if the connection with the Warehouse micro-service is available
+function handshake(param = config) {
+    return new Promise((resolve, reject) => {
+        let connectBool = false;
+        if (types.isClientConfig(param)) {
+            logger_1.logger.log('info', `Client config file perfectly loaded`);
+            logger_1.logger.log('debug', `Config file content: \n ${JSON.stringify(param)}`);
+            portSocket = param.portSocket;
+            addressWarehouse = param.warehouseAddress;
+            urlSocket = `http://${addressWarehouse}:${portSocket}`;
+            let socket = io.connect(urlSocket);
+            socket.on('connect', function () {
+                connectBool = true;
+                resolve(connectBool);
+            })
+                .on('connect_error', function () {
+                reject(connectBool);
+                socket.disconnect();
+            });
+        }
+        else {
+            logger_1.logger.log('error', `Config file not in good format \n ${JSON.stringify(config)}`);
+            reject(connectBool);
+        }
+    });
+}
+exports.handshake = handshake;

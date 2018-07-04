@@ -68,7 +68,7 @@ function loadDumpIndexation () : EventEmitter {
 
 	logger.log('success', '----> OK');
 	logger.log('info', `Start loading dump file to database...`)
-	index.storeJob(file).on('storeDone', () => {
+	index.storeJob(file.docs).on('storeDone', () => {
 		logger.log('success', `----> OK \n\n`);
 		logger.log('info', '***********     INDEXATION TEST     ***********')
 		logger.log('info', `Searching for jobID.json files in... \n ./test/cache_Dir_1  ./test/cache_Dir_2  ./test/cache_Dir_3`)
@@ -147,7 +147,6 @@ export function cleanDB (addressDB : string, portDB : number, nameDB : string, a
 		for (let [index,elem] of docs.entries()) {
 			id = elem._id;
 			rev = elem._rev;
-
 			deleteDoc(id, rev, addressDB, portDB, nameDB, accountDB, passwordDB, proxyBool);
 
 			if (index === docs.length - 1) {

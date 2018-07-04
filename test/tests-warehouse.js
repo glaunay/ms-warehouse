@@ -64,7 +64,7 @@ function loadDumpIndexation() {
     let file = jsonfile.readFileSync('./test/data.json');
     logger_1.logger.log('success', '----> OK');
     logger_1.logger.log('info', `Start loading dump file to database...`);
-    index.storeJob(file).on('storeDone', () => {
+    index.storeJob(file.docs).on('storeDone', () => {
         logger_1.logger.log('success', `----> OK \n\n`);
         logger_1.logger.log('info', '***********     INDEXATION TEST     ***********');
         logger_1.logger.log('info', `Searching for jobID.json files in... \n ./test/cache_Dir_1  ./test/cache_Dir_2  ./test/cache_Dir_3`);

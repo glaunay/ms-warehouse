@@ -6,7 +6,7 @@
 import EventEmitter = require('events');
 import jsonfile = require('jsonfile');
 import pathExists = require('path-exists');
-const config = require('./config.json')
+const config = require('./config-client.json')
 import io = require('socket.io-client');
 import path = require('path');
 // Required modules
@@ -15,18 +15,9 @@ import { logger, setLogLevel } from './lib/logger';
 
 let emetTest: EventEmitter = new EventEmitter();
 
-let portSocket: number = config.portSocket;
-let addressWarehouse: string = config.warehouseAddress;
-let urlSocket: string = `http://${addressWarehouse}:${portSocket}`;
-let dbName: string = config.databaseName;
-
-
-// export interface jobFootprint {
-//     workDir: string,
-//     exportVar? : cType.stringMap,
-//     scriptHash: string,
-//     inputHash? : cType.stringMap
-// }
+let portSocket: number;
+let addressWarehouse: string;
+let urlSocket: string;
 
 /*
 * function push that send a message inside the socket connection to the warehouse server
@@ -49,7 +40,7 @@ export function pushConstraints (constraints : types.jobSerialConstraints) : Eve
 		if (messageResults.value === 'found') {
 			let workPath : string = messageResults.data[0].workDir;
 			fStdout_fSterr_Check(workPath).on('checkOK', (nameOut: string, nameErr: string) => {
-				logger.log('success', `Found ${messageResults.data.length} jobs traces in ${dbName}`)
+				logger.log('success', `Found ${messageResults.data.length} jobs traces`)
 				emitterConstraints.emit('foundDocs', nameOut, nameErr, workPath);
 			})
 			.on('checkNotOK', () => {
@@ -156,6 +147,37 @@ function fStdout_fSterr_Check (workDir: string) : EventEmitter {
 	});
 
 	return emitterCheck;
+}
+
+// Function handshake that test if the connection with the Warehouse micro-service is available
+export function handshake (param: types.clientConfig = config): Promise<any> {
+
+	return new Promise ((resolve, reject) => {
+		let connectBool: boolean = false;
+
+		if (types.isClientConfig(param)){
+			logger.log('info', `Client config file perfectly loaded`);
+			logger.log('debug', `Config file content: \n ${JSON.stringify(param)}`)
+			portSocket = param.portSocket;
+			addressWarehouse = param.warehouseAddress;
+			urlSocket = `http://${addressWarehouse}:${portSocket}`;
+
+			let socket = io.connect(urlSocket);
+			
+			socket.on('connect', function() {
+				connectBool = true;
+				resolve(connectBool);
+			})
+			.on('connect_error', function() {
+				reject(connectBool);
+				socket.disconnect() 
+			})
+		}
+		else {
+			logger.log('error', `Config file not in good format \n ${JSON.stringify(config)}`);
+			reject(connectBool);
+	}
+	})
 }
 
 

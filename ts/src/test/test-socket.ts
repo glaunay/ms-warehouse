@@ -4,11 +4,24 @@
 	Then, the client will send the constraints to the server through the socket connection.
 */
 
-import client = require('../wh-client')
+import program = require ("commander");
+import client = require('../wh-client');
 import * as types from '../types/index';
 import { logger, setLogLevel } from '../lib/logger';
 
-logger.log('info',"\t\t***** Starting Warehouse features with Socket connections *****\n");
+program
+  .option("-a, --address <address>", "Warehouse address")
+  .option("-p, --port <port>", "Warehouse socket port")
+  .option("-v, --verbosity <logLevel>", "Set log level (debug, info, success, warning, error, critical)", setLogLevel)
+  .parse(process.argv);
+
+logger.log('info',"\t\t***** Starting Socket connections tests *****\n");
+
+
+let paramBuild: types.clientConfig = {
+	"warehouseAddress": program.address ? program.address : "localhost",
+	"portSocket": program.port ? Number.isInteger(Number(program.port)) ? Number(program.port) : 7688 : 7688
+}
 
 // constraints for testing
 let constraints : types.jobSerialConstraints = {
@@ -35,11 +48,14 @@ let jobID_Test : types.jobSerialInterface = {
 	}
 }
 
+
 /*
 * function createJobByExpress that will check if job already exist inside the coiuchDB database before creating it.
 * @constraints : constraints we want to check
 */
 function createJobBySocket (constraints : types.jobSerialConstraints) : void {
+	logger.log('info', `Checking job trace in Warehouse from constraints...`);
+	logger.log('debug', `Constraints:\n ${JSON.stringify(constraints)}`);
 	client.pushConstraints(constraints);
 }
 
@@ -52,5 +68,13 @@ function onJobComp (data : types.jobSerialInterface) : void {
 	client.storeJob(jobID_Test)
 }
 
-createJobBySocket(constraints);
-onJobComp(jobID_Test);
+client.handshake(paramBuild).then((bool)=>{
+	logger.log('info', `Connection with Warehouse server succeed, starting tests...\n`)
+	createJobBySocket(constraints);
+	onJobComp(jobID_Test);
+})
+.catch((bool)=> {
+	logger.log('warning', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`)
+})
+
+
