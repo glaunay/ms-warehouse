@@ -2,7 +2,7 @@
   "name": "ms-warehouse",
   "version": "1.0.9",
   "description": "Job-warehouse is a MicroService (MS) which stores pipelines and jobs into a NoSQL database, in order to restore them if necessary.   In development...",
-  "main": "wh-client.js",
+  "main": "./build/wh-client.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/melaniegarnier/ms-warehouse.git"
