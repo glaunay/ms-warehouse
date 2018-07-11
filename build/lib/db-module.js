@@ -195,6 +195,7 @@ class addData extends EventEmitter {
                         if (checkEqual && result[0] === true) {
                             resolve();
                         }
+                        // (7)
                         else {
                             self.docList = self.docList.filter((elem, i) => result[i] === false);
                             self.chunkRes = '';

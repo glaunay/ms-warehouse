@@ -18,7 +18,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
     result["default"] = mod;
     return result;
-}
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 // Required packages
 const child_process_1 = require("child_process");
@@ -83,7 +83,7 @@ logger_1.logger.log("info", "\t\t***** Starting public Warehouse MicroService **
 *	- if index (3)
 *		this option ask the program to run the indexation feature.
 */
-if (program.config && program.config !== "") {
+if (program.config && program.config !== "") { // (1)
     pathConfig = program.config;
     try {
         configContent = jsonfile.readFileSync(pathConfig); // parsing config.file content // add try catch
@@ -97,7 +97,7 @@ else {
     logger_1.logger.log('warning', 'No config file specified');
     throw 'stop execution';
 }
-if (program.index) {
+if (program.index) { // (3)
     if (configContent.hasOwnProperty('previousCacheDir')) {
         index = true;
     }
@@ -392,11 +392,13 @@ function constraintsCall(constraints, connectType) {
         logger_1.logger.log('debug', `constraints: ${JSON.stringify(constraints)}`);
         emitterCall.emit(`${connectType}Succeed`, docsResults.docs);
     })
+        // if docs not found in couchDB database
         .on('noDocsFound', (docsResults) => {
         logger_1.logger.log('info', `No docs founds for constraints`);
         logger_1.logger.log('debug', `constraints: \n ${JSON.stringify(constraints)}`);
         emitterCall.emit(`${connectType}NoResults`, docsResults.docs);
     })
+        // if an error occured
         .on('errorOnConstraints', (err) => {
         logger_1.logger.log('warning', `Constraints are empty or not in the right format`);
         emitterCall.emit(`${connectType}Failed`, err);
@@ -546,7 +548,7 @@ function constraintsToQuery(constraints, either = false) {
                 sel[elem] = { "$exists": true }; // (3.1)
             return; // if constraints is null then we jump to the next iteration of the map => will return any value on this key
         }
-        if (types.isStringMap(constraints[elem])) {
+        if (types.isStringMap(constraints[elem])) { // (3.2)
             either ? sel.$or.push({ [elem]: { "$in": [constraints[elem]] } }) : sel[elem] = { "$in": [constraints[elem]] };
         }
         else {
