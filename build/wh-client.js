@@ -30,36 +30,43 @@ let urlSocket;
 * #socket : socket client connection on adress.
 * #msg : message passed inside the socket connection, using the messageBuilder fonction
 */
-function pushConstraints(constraints) {
+function pushConstraints(constraints, param = config) {
     let emitterConstraints = new EventEmitter();
     let socket = io.connect(urlSocket);
     let msg = messageBuilder(constraints, 'pushConstraints');
-    socket.on('connect', function () {
-        socket.emit('pushConstraints', msg);
+    handshake(param).then((bool) => {
+        logger_1.logger.log('info', `Connection with Warehouse server succeed, starting communication...\n`);
+        socket.on('connect', function () {
+            socket.emit('pushConstraints', msg);
+        })
+            .on('resultsConstraints', (messageResults) => {
+            // add condition for the existence of workDir?
+            //if (obj1.hasOwnProperty('workDir')) console.log('toto')
+            if (messageResults.value === 'found') {
+                logger_1.logger.log('info', `Job trace found in Warehouse`);
+                logger_1.logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
+                let workPath = messageResults.data[0].workDir;
+                fStdout_fSterr_Check(workPath).on('checkOK', (nameOut, nameErr) => {
+                    logger_1.logger.log('success', `Found ${messageResults.data.length} jobs traces`);
+                    emitterConstraints.emit('foundDocs', nameOut, nameErr, workPath);
+                })
+                    .on('checkNotOK', () => {
+                    emitterConstraints.emit('notFoundDocs');
+                });
+            }
+            ;
+            if (messageResults.value === 'notFound') {
+                logger_1.logger.log('info', `Job trace not found in Warehouse`);
+                logger_1.logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
+                emitterConstraints.emit('notFoundDocs', messageResults);
+            }
+            if (messageResults.value === 'errorConstraints')
+                emitterConstraints.emit('errorDocs', messageResults);
+        });
     })
-        .on('resultsConstraints', (messageResults) => {
-        // add condition for the existence of workDir?
-        //if (obj1.hasOwnProperty('workDir')) console.log('toto')
-        if (messageResults.value === 'found') {
-            logger_1.logger.log('info', `Job trace found in Warehouse`);
-            logger_1.logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
-            let workPath = messageResults.data[0].workDir;
-            fStdout_fSterr_Check(workPath).on('checkOK', (nameOut, nameErr) => {
-                logger_1.logger.log('success', `Found ${messageResults.data.length} jobs traces`);
-                emitterConstraints.emit('foundDocs', nameOut, nameErr, workPath);
-            })
-                .on('checkNotOK', () => {
-                emitterConstraints.emit('notFoundDocs');
-            });
-        }
-        ;
-        if (messageResults.value === 'notFound') {
-            logger_1.logger.log('info', `Job trace not found in Warehouse`);
-            logger_1.logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
-            emitterConstraints.emit('notFoundDocs', messageResults);
-        }
-        if (messageResults.value === 'errorConstraints')
-            emitterConstraints.emit('errorDocs', messageResults);
+        .catch((bool) => {
+        logger_1.logger.log('warning', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
+        emitterConstraints.emit('cantConnect');
     });
     return emitterConstraints;
 }
@@ -150,7 +157,7 @@ function fStdout_fSterr_Check(workDir) {
     return emitterCheck;
 }
 // Function handshake that test if the connection with the Warehouse micro-service is available
-function handshake(param = config) {
+function handshake(param) {
     return new Promise((resolve, reject) => {
         let connectBool = false;
         if (types.isClientConfig(param)) {

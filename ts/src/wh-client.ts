@@ -25,37 +25,45 @@ let urlSocket: string;
 * #socket : socket client connection on adress.
 * #msg : message passed inside the socket connection, using the messageBuilder fonction
 */
-export function pushConstraints (constraints : types.jobSerialConstraints) : EventEmitter {
+export function pushConstraints (constraints : types.jobSerialConstraints, param: types.clientConfig = config) : EventEmitter {
 	let emitterConstraints : EventEmitter = new EventEmitter();
 	let socket = io.connect(urlSocket);
 	let msg = messageBuilder(constraints, 'pushConstraints');
 
-	socket.on('connect', function() {
-		socket.emit('pushConstraints', msg);
-	})
-	.on('resultsConstraints', (messageResults: types.msg) => {
-		// add condition for the existence of workDir?
-		//if (obj1.hasOwnProperty('workDir')) console.log('toto')
-		if (messageResults.value === 'found') {
-			logger.log('info', `Job trace found in Warehouse`);
-			logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
-			let workPath = messageResults.data[0].workDir;
-			fStdout_fSterr_Check(workPath).on('checkOK', (nameOut: string, nameErr: string) => {
-				logger.log('success', `Found ${messageResults.data.length} jobs traces`)
-				emitterConstraints.emit('foundDocs', nameOut, nameErr, workPath);
-			})
-			.on('checkNotOK', () => {
-				emitterConstraints.emit('notFoundDocs')
-			})
-		};
+	handshake(param).then((bool: boolean)=>{
+		logger.log('info', `Connection with Warehouse server succeed, starting communication...\n`);
+		socket.on('connect', function() {
+			socket.emit('pushConstraints', msg);
+		})
+		.on('resultsConstraints', (messageResults: types.msg) => {
+			// add condition for the existence of workDir?
+			//if (obj1.hasOwnProperty('workDir')) console.log('toto')
+			if (messageResults.value === 'found') {
+				logger.log('info', `Job trace found in Warehouse`);
+				logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
+				let workPath = messageResults.data[0].workDir;
+				fStdout_fSterr_Check(workPath).on('checkOK', (nameOut: string, nameErr: string) => {
+					logger.log('success', `Found ${messageResults.data.length} jobs traces`)
+					emitterConstraints.emit('foundDocs', nameOut, nameErr, workPath);
+				})
+				.on('checkNotOK', () => {
+					emitterConstraints.emit('notFoundDocs')
+				})
+			};
 
-		if (messageResults.value === 'notFound') {
-			logger.log('info', `Job trace not found in Warehouse`);
-			logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
-			emitterConstraints.emit('notFoundDocs', messageResults);
-		}
-		if (messageResults.value === 'errorConstraints') emitterConstraints.emit('errorDocs', messageResults);
+			if (messageResults.value === 'notFound') {
+				logger.log('info', `Job trace not found in Warehouse`);
+				logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
+				emitterConstraints.emit('notFoundDocs', messageResults);
+			}
+			if (messageResults.value === 'errorConstraints') emitterConstraints.emit('errorDocs', messageResults);
+		})
 	})
+	.catch((bool: boolean)=> {
+        logger.log('warning', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
+        emitterConstraints.emit('cantConnect');
+    })
+
 	return emitterConstraints;
 }
 
@@ -155,7 +163,7 @@ function fStdout_fSterr_Check (workDir: string) : EventEmitter {
 }
 
 // Function handshake that test if the connection with the Warehouse micro-service is available
-export function handshake (param: types.clientConfig = config): Promise<any> {
+export function handshake (param: types.clientConfig): Promise<any> {
 
 	return new Promise ((resolve, reject) => {
 		let connectBool: boolean = false;
