@@ -4,20 +4,26 @@
 */
 
 // Required packages
-//import program = require('commander');
+import program = require('commander');
 import request = require('request');
-const config = require('../config.json')
 // Required modules
 import * as types from '../types/index';
 import { logger, setLogLevel } from '../lib/logger';
 
-logger.log('info',"\t\t***** Starting Warehouse features with HTTP connections *****\n");
+program
+  .option("-a, --address <address>", "Warehouse address")
+  .option("-p, --port <port>", "Warehouse socket port")
+  .option("-v, --verbosity <logLevel>", "Set log level (debug, info, success, warning, error, critical)", setLogLevel)
+  .parse(process.argv);
 
+logger.log('info',"\t\t***** Starting Express connections tests *****\n");
 
-let portExpress : number = config.portExpress;
-let addressWarehouse : string = config.warehouseAddress;
+let paramBuild: types.clientConfig = {
+	"warehouseAddress": program.address ? program.address : "localhost",
+	"portSocket": program.port ? Number.isInteger(Number(program.port)) ? Number(program.port) : 7687 : 7687
+}
 
-let urlExpress : string = `http://${addressWarehouse}:${portExpress}`
+let urlExpress : string = `http://${paramBuild.warehouseAddress}:${paramBuild.portSocket}`
 
 // constraints for testing
 let constraints : types.jobSerialConstraints = {

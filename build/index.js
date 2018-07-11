@@ -114,48 +114,6 @@ if (program.dumpload)
     dumpload = true;
 if (program.noproxy)
     proxyBool = true;
-// Checking config.json content
-// Every config.json property are required
-// if (configContent.hasOwnProperty('accountDBName')) accountDB = configContent.accountDBName;
-// else {
-// 	logger.log('warning','No "accountDBName" key found in config.json file');
-// 	throw 'stop execution';
-// }
-// if (configContent.hasOwnProperty('password')) passwordDB = configContent.password;
-// else {
-// 	logger.log('warning','No "password" key found in config.json file');
-// 	throw 'stop execution';
-// }
-// if (configContent.hasOwnProperty('databaseName')) nameDB = configContent.databaseName;
-// else{
-// 	logger.log('warning','No "databaseName" key found in config.json file');
-// 	throw 'stop execution';
-// }
-// if (configContent.hasOwnProperty('databaseAddress')) addressDB = configContent.databaseAddress;
-// else{
-// 	logger.log('warning','No "databaseAddress" key found in config.json file');
-// 	throw 'stop execution';
-// }
-// if (configContent.hasOwnProperty('portCouch')) portDB = configContent.portCouch;
-// else {
-// 	logger.log('warning','No "portCouch" key found in config.json file');
-// 	throw 'stop execution';
-// }
-// if (configContent.hasOwnProperty('portExpress')) portExpress = configContent.portExpress;
-// else {
-// 	logger.log('warning','No "portExpress" key found in config.json file');
-// 	throw 'stop execution';
-// }
-// if (configContent.hasOwnProperty('portSocket')) portSocket = configContent.portSocket;
-// else {
-// 	logger.log('warning','No "portSocket" key found in config.json file');
-// 	throw 'stop execution';
-// }
-// if( (configContent.hasOwnProperty('warehouseAddress'))) addressWarehouse = configContent.warehouseAddress;
-// else {
-// 	logger.log('warning', 'No "warehouseAddress" key found in config.json file');
-// 	throw 'stop execution';
-// }
 if (types.isServerConfig(configContent)) {
     logger_1.logger.log('info', `Server config file perfectly loaded`);
     accountDB = configContent.accountDBName;
@@ -280,7 +238,6 @@ function dumpOption() {
     return new Promise((resolve, reject) => {
         dumpingDatabase()
             .on('dumpDone', () => {
-            logger_1.logger.log('success', `Dumping of ${nameDB} succeed, ${nameDB}.json file created\n`);
             resolve();
         })
             .on('dumpFailed', (err) => {

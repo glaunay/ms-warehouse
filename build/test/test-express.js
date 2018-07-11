@@ -5,14 +5,20 @@
 */
 Object.defineProperty(exports, "__esModule", { value: true });
 // Required packages
-//import program = require('commander');
+const program = require("commander");
 const request = require("request");
-const config = require('../config.json');
 const logger_1 = require("../lib/logger");
-logger_1.logger.log('info', "\t\t***** Starting Warehouse features with HTTP connections *****\n");
-let portExpress = config.portExpress;
-let addressWarehouse = config.warehouseAddress;
-let urlExpress = `http://${addressWarehouse}:${portExpress}`;
+program
+    .option("-a, --address <address>", "Warehouse address")
+    .option("-p, --port <port>", "Warehouse socket port")
+    .option("-v, --verbosity <logLevel>", "Set log level (debug, info, success, warning, error, critical)", logger_1.setLogLevel)
+    .parse(process.argv);
+logger_1.logger.log('info', "\t\t***** Starting Express connections tests *****\n");
+let paramBuild = {
+    "warehouseAddress": program.address ? program.address : "localhost",
+    "portSocket": program.port ? Number.isInteger(Number(program.port)) ? Number(program.port) : 7687 : 7687
+};
+let urlExpress = `http://${paramBuild.warehouseAddress}:${paramBuild.portSocket}`;
 // constraints for testing
 let constraints = {
     "script": null, "scriptHash": "e50328c5-dc7f-445d-a5ef-449f4c4b9425",

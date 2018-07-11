@@ -1,5 +1,5 @@
 {
-	"previousCacheDir" : ["./test/cache_Dir_1", "./test/cache_Dir_2", "./test/cache_Dir_3"],
+	"previousCacheDir" : ["../data/cache_Dir_1", "../data/cache_Dir_2", "../data/cache_Dir_3"],
 	"accountDBName": "vreymond",
 	"password": "couch",
 	"databaseName" : "warehouse",

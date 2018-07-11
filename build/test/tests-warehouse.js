@@ -61,7 +61,7 @@ exports.startTests = startTests;
 function loadDumpIndexation() {
     let emitterDumpLoad = new EventEmitter();
     logger_1.logger.log('info', `Reading data.json file content...`);
-    let file = jsonfile.readFileSync('./test/data.json');
+    let file = jsonfile.readFileSync('../data/data.json');
     logger_1.logger.log('success', '----> OK');
     logger_1.logger.log('info', `Start loading dump file to database...`);
     index.storeJob(file.docs).on('storeDone', () => {

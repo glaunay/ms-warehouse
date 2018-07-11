@@ -64,7 +64,7 @@ function loadDumpIndexation () : EventEmitter {
 	let emitterDumpLoad : EventEmitter = new EventEmitter();
 	logger.log('info', `Reading data.json file content...`)
 
-	let file = jsonfile.readFileSync('./test/data.json');
+	let file = jsonfile.readFileSync('../data/data.json');
 
 	logger.log('success', '----> OK');
 	logger.log('info', `Start loading dump file to database...`)

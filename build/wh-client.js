@@ -14,7 +14,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // Required packages
 const EventEmitter = require("events");
 const pathExists = require("path-exists");
-const config = require('./config-client.json');
+const config = require('../data/config-client.json');
 const io = require("socket.io-client");
 const path = require("path");
 // Required modules

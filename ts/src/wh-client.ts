@@ -6,7 +6,7 @@
 import EventEmitter = require('events');
 import jsonfile = require('jsonfile');
 import pathExists = require('path-exists');
-const config = require('./config-client.json')
+const config = require('../data/config-client.json')
 import io = require('socket.io-client');
 import path = require('path');
 // Required modules
