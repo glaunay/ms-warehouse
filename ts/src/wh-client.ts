@@ -30,9 +30,7 @@ export function pushConstraints (constraints : types.jobSerialConstraints, param
 	portSocket = param.portSocket;
 	addressWarehouse = param.warehouseAddress;
 	urlSocket = `http://${addressWarehouse}:${portSocket}`;
-	let socket = io.connect(urlSocket);
-	let msg = messageBuilder(constraints, 'pushConstraints');
-
+	
 	handshake(param).then(() => {
 		logger.log('info', `Connection with Warehouse server succeed, starting communication...\n`);
 		let socket = io.connect(urlSocket);
