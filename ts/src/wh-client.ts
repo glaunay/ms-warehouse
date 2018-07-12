@@ -27,17 +27,20 @@ let urlSocket: string;
 */
 export function pushConstraints (constraints : types.jobSerialConstraints, param: types.clientConfig = config) : EventEmitter {
 	let emitterConstraints : EventEmitter = new EventEmitter();
+	portSocket = param.portSocket;
+	addressWarehouse = param.warehouseAddress;
+	urlSocket = `http://${addressWarehouse}:${portSocket}`;
 	let socket = io.connect(urlSocket);
 	let msg = messageBuilder(constraints, 'pushConstraints');
 
-	handshake(param).then((bool: boolean)=>{
+	handshake(param).then(() => {
 		logger.log('info', `Connection with Warehouse server succeed, starting communication...\n`);
+		let socket = io.connect(urlSocket);
+		let msg = messageBuilder(constraints, 'pushConstraints');
 		socket.on('connect', function() {
 			socket.emit('pushConstraints', msg);
 		})
 		.on('resultsConstraints', (messageResults: types.msg) => {
-			// add condition for the existence of workDir?
-			//if (obj1.hasOwnProperty('workDir')) console.log('toto')
 			if (messageResults.value === 'found') {
 				logger.log('info', `Job trace found in Warehouse`);
 				logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
@@ -59,7 +62,7 @@ export function pushConstraints (constraints : types.jobSerialConstraints, param
 			if (messageResults.value === 'errorConstraints') emitterConstraints.emit('errorDocs', messageResults);
 		})
 	})
-	.catch((bool: boolean)=> {
+	.catch(() => {
         logger.log('warning', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
         emitterConstraints.emit('cantConnect');
     })
@@ -133,8 +136,6 @@ function fStdout_fSterr_Check (workDir: string) : EventEmitter {
 	let emitterCheck : EventEmitter = new EventEmitter();
 	let splitWorkDir: string[] = workDir.split('/');
 
-	//let extractRepo: string = splitWorkDir[splitWorkDir.length - 1]
-
 	let nameOut: string = path.basename(workDir) + ".out";
 	let nameErr: string = path.basename(workDir) + ".err";
 	let pathOut: string = workDir + "/" + nameOut;
@@ -166,29 +167,24 @@ function fStdout_fSterr_Check (workDir: string) : EventEmitter {
 export function handshake (param: types.clientConfig): Promise<any> {
 
 	return new Promise ((resolve, reject) => {
-		let connectBool: boolean = false;
 
 		if (types.isClientConfig(param)){
 			logger.log('info', `Client config paramaters perfectly loaded`);
 			logger.log('debug', `Config file content: \n ${JSON.stringify(param)}`)
-			portSocket = param.portSocket;
-			addressWarehouse = param.warehouseAddress;
-			urlSocket = `http://${addressWarehouse}:${portSocket}`;
-
+			
 			let socket = io.connect(urlSocket);
 			
 			socket.on('connect', function() {
-				connectBool = true;
-				resolve(connectBool);
+				resolve();
 			})
 			.on('connect_error', function() {
-				reject(connectBool);
+				reject();
 				socket.disconnect() 
 			})
 		}
 		else {
 			logger.log('error', `Config file not in good format \n ${JSON.stringify(config)}`);
-			reject(connectBool);
+			reject();
 	}
 	})
 }

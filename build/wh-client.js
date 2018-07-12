@@ -32,16 +32,19 @@ let urlSocket;
 */
 function pushConstraints(constraints, param = config) {
     let emitterConstraints = new EventEmitter();
+    portSocket = param.portSocket;
+    addressWarehouse = param.warehouseAddress;
+    urlSocket = `http://${addressWarehouse}:${portSocket}`;
     let socket = io.connect(urlSocket);
     let msg = messageBuilder(constraints, 'pushConstraints');
-    handshake(param).then((bool) => {
+    handshake(param).then(() => {
         logger_1.logger.log('info', `Connection with Warehouse server succeed, starting communication...\n`);
+        let socket = io.connect(urlSocket);
+        let msg = messageBuilder(constraints, 'pushConstraints');
         socket.on('connect', function () {
             socket.emit('pushConstraints', msg);
         })
             .on('resultsConstraints', (messageResults) => {
-            // add condition for the existence of workDir?
-            //if (obj1.hasOwnProperty('workDir')) console.log('toto')
             if (messageResults.value === 'found') {
                 logger_1.logger.log('info', `Job trace found in Warehouse`);
                 logger_1.logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
@@ -64,7 +67,7 @@ function pushConstraints(constraints, param = config) {
                 emitterConstraints.emit('errorDocs', messageResults);
         });
     })
-        .catch((bool) => {
+        .catch(() => {
         logger_1.logger.log('warning', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
         emitterConstraints.emit('cantConnect');
     });
@@ -130,7 +133,6 @@ function messageBuilder(data, event, store = false, index = false) {
 function fStdout_fSterr_Check(workDir) {
     let emitterCheck = new EventEmitter();
     let splitWorkDir = workDir.split('/');
-    //let extractRepo: string = splitWorkDir[splitWorkDir.length - 1]
     let nameOut = path.basename(workDir) + ".out";
     let nameErr = path.basename(workDir) + ".err";
     let pathOut = workDir + "/" + nameOut;
@@ -159,26 +161,21 @@ function fStdout_fSterr_Check(workDir) {
 // Function handshake that test if the connection with the Warehouse micro-service is available
 function handshake(param) {
     return new Promise((resolve, reject) => {
-        let connectBool = false;
         if (types.isClientConfig(param)) {
             logger_1.logger.log('info', `Client config paramaters perfectly loaded`);
             logger_1.logger.log('debug', `Config file content: \n ${JSON.stringify(param)}`);
-            portSocket = param.portSocket;
-            addressWarehouse = param.warehouseAddress;
-            urlSocket = `http://${addressWarehouse}:${portSocket}`;
             let socket = io.connect(urlSocket);
             socket.on('connect', function () {
-                connectBool = true;
-                resolve(connectBool);
+                resolve();
             })
                 .on('connect_error', function () {
-                reject(connectBool);
+                reject();
                 socket.disconnect();
             });
         }
         else {
             logger_1.logger.log('error', `Config file not in good format \n ${JSON.stringify(config)}`);
-            reject(connectBool);
+            reject();
         }
     });
 }
