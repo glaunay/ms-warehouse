@@ -32,7 +32,6 @@ export function pushConstraints (constraints : types.jobSerialConstraints, param
 	urlSocket = `http://${addressWarehouse}:${portSocket}`;
 	
 	handshake(param).then(() => {
-		logger.log('info', `Connection with Warehouse server succeed, starting communication...\n`);
 		let socket = io.connect(urlSocket);
 		let msg = messageBuilder(constraints, 'pushConstraints');
 		socket.on('connect', function() {
@@ -61,7 +60,6 @@ export function pushConstraints (constraints : types.jobSerialConstraints, param
 		})
 	})
 	.catch(() => {
-        logger.log('warn', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
         emitterConstraints.emit('cantConnect');
     })
 
@@ -173,9 +171,11 @@ export function handshake (param: types.clientConfig): Promise<any> {
 			let socket = io.connect(urlSocket);
 			
 			socket.on('connect', function() {
+				logger.log('info', `Connection with Warehouse server succeed, starting communication...\n`);
 				resolve();
 			})
 			.on('connect_error', function() {
+				logger.log('warn', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
 				reject();
 				socket.disconnect() 
 			})

@@ -36,7 +36,6 @@ function pushConstraints(constraints, param = config) {
     addressWarehouse = param.warehouseAddress;
     urlSocket = `http://${addressWarehouse}:${portSocket}`;
     handshake(param).then(() => {
-        logger_1.logger.log('info', `Connection with Warehouse server succeed, starting communication...\n`);
         let socket = io.connect(urlSocket);
         let msg = messageBuilder(constraints, 'pushConstraints');
         socket.on('connect', function () {
@@ -66,7 +65,6 @@ function pushConstraints(constraints, param = config) {
         });
     })
         .catch(() => {
-        logger_1.logger.log('warn', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
         emitterConstraints.emit('cantConnect');
     });
     return emitterConstraints;
@@ -164,9 +162,11 @@ function handshake(param) {
             logger_1.logger.log('debug', `Config file content: \n ${JSON.stringify(param)}`);
             let socket = io.connect(urlSocket);
             socket.on('connect', function () {
+                logger_1.logger.log('info', `Connection with Warehouse server succeed, starting communication...\n`);
                 resolve();
             })
                 .on('connect_error', function () {
+                logger_1.logger.log('warn', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
                 reject();
                 socket.disconnect();
             });
