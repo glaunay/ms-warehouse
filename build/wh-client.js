@@ -160,7 +160,7 @@ function handshake(param) {
         if (types.isClientConfig(param)) {
             logger_1.logger.log('info', `Client config paramaters perfectly loaded`);
             logger_1.logger.log('debug', `Config file content: \n ${JSON.stringify(param)}`);
-            let socket = io.connect(urlSocket);
+            let socket = io.connect(`http://${param.warehouseAddress}:${param.portSocket}`);
             socket.on('connect', function () {
                 logger_1.logger.log('info', `Connection with Warehouse server succeed, starting communication...\n`);
                 resolve();

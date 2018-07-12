@@ -168,7 +168,7 @@ export function handshake (param: types.clientConfig): Promise<any> {
 			logger.log('info', `Client config paramaters perfectly loaded`);
 			logger.log('debug', `Config file content: \n ${JSON.stringify(param)}`)
 			
-			let socket = io.connect(urlSocket);
+			let socket = io.connect(`http://${param.warehouseAddress}:${param.portSocket}`);
 			
 			socket.on('connect', function() {
 				logger.log('info', `Connection with Warehouse server succeed, starting communication...\n`);
