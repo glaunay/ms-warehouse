@@ -84,7 +84,7 @@ if (program.config && program.config !== "") { // (1)
 }
 
 else {
-	logger.log('warning','No config file specified');
+	logger.log('warn','No config file specified');
 	throw 'stop execution';
 }
 
@@ -93,7 +93,7 @@ if (program.index) { // (3)
 		index = true;
 	}
 	else {
-		logger.log('warning','No "previousCacheDir" key found in config file. Indexation will not work.')
+		logger.log('warn','No "previousCacheDir" key found in config file. Indexation will not work.')
 	}
 } 
 else {
@@ -184,7 +184,7 @@ function dumpLoadOption () : Promise<{}> {
 			else fileContent = file.rows;
 		}
 		else if (Array.isArray(file)) fileContent = file;
-		else logger.log('warning', `dump from JSON file failed, not a JSON format, please refer to the documentation`);
+		else logger.log('warn', `dump from JSON file failed, not a JSON format, please refer to the documentation`);
 
 		if (fileContent.length > 0) {
 			logger.log('info', `Starting load dump file of ${program.dumpload}...`);
@@ -199,7 +199,7 @@ function dumpLoadOption () : Promise<{}> {
 			})	
 		}
 		else {
-			logger.log('warning', `Empty file detected`);
+			logger.log('warn', `Empty file detected`);
 			reject();
 		}
 	})
@@ -405,7 +405,7 @@ export function constraintsCall (constraints : types.jobSerialConstraints, conne
 	})
 	// if an error occured
 	.on('errorOnConstraints', (err) => {
-		logger.log('warning', `Constraints are empty or not in the right format`)
+		logger.log('warn', `Constraints are empty or not in the right format`)
 		emitterCall.emit(`${connectType}Failed`, err);
 	})
 
@@ -461,7 +461,7 @@ function globCaches (pathsArray : string[]) : string[] {
 
 	// checking that previousCacheDir content is an array
 	if (!Array.isArray(pathsArray)) {
-		logger.log('warning', 'previousCacheDir variable from config file is not an Array');
+		logger.log('warn', 'previousCacheDir variable from config file is not an Array');
 		throw  'stop execution';
 
 	}
@@ -503,7 +503,7 @@ function directorySearch (directoryPath : string) : string {
 		uuidDir = uuidArray.pop()  // retrieving the last element of uuidArray
 	}
 	else {
-		logger.log('warning', `no uuid key found in: ${directoryPath}`);
+		logger.log('warn', `no uuid key found in: ${directoryPath}`);
 	}
 
 	logger.log('debug', `uuid of the directory that contain a jobID.json file ${uuidDir}`);
@@ -521,14 +521,14 @@ function extractDoc (path : string, uuid : string) : types.jobSerialInterface | 
 	let file : types.jobSerialInterface;
 	
 	if (typeof(path) !== 'string') {
-		logger.log('warning', `path given is not a string type : \n ${path}`)
+		logger.log('warn', `path given is not a string type : \n ${path}`)
 	}
 
 	try {
 		file = jsonfile.readFileSync(path);
 	}
 	catch (err) {
-		logger.log('warning', `while reading the json file ${path} : \n ${err}`);
+		logger.log('warn', `while reading the json file ${path} : \n ${err}`);
 		return null;
 	}
 
@@ -560,14 +560,14 @@ export function constraintsToQuery (constraints : types.jobSerialConstraints, ei
 
 	if (strConstr === JSON.stringify({}) || strConstr === JSON.stringify([])) {
 		let error : string = 'Empty constraints json or array given';
-		logger.log('warning', error);
+		logger.log('warn', error);
 		constEmitter.emit('errorOnConstraints');
 		return constEmitter;
 	} // (1)
 
 	if (!constraints) {
 		let error : string = 'Constraints value is evaluated to false, maybe empty object or empty string';
-		logger.log('warning', error);
+		logger.log('warn', error);
 		constEmitter.emit('errorOnConstraints');
 		return constEmitter;
 	} // (1)
@@ -630,7 +630,7 @@ emitter.on('indexDone', () => {
 	logger.log('info', 'Indexation succeed properly');
 })
 .on('maxTryReach', (docListFailed) => {
-	logger.log('warning', `adding failed for this following list of document: \n ${docListFailed} `);
+	logger.log('warn', `adding failed for this following list of document: \n ${docListFailed} `);
 })
 .on('callCurlErr', (err) => {
 	logger.log('error', `curl command failed: \n ${err}`);

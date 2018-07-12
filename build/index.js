@@ -94,7 +94,7 @@ if (program.config && program.config !== "") { // (1)
     }
 }
 else {
-    logger_1.logger.log('warning', 'No config file specified');
+    logger_1.logger.log('warn', 'No config file specified');
     throw 'stop execution';
 }
 if (program.index) { // (3)
@@ -102,7 +102,7 @@ if (program.index) { // (3)
         index = true;
     }
     else {
-        logger_1.logger.log('warning', 'No "previousCacheDir" key found in config file. Indexation will not work.');
+        logger_1.logger.log('warn', 'No "previousCacheDir" key found in config file. Indexation will not work.');
     }
 }
 else {
@@ -191,7 +191,7 @@ function dumpLoadOption() {
         else if (Array.isArray(file))
             fileContent = file;
         else
-            logger_1.logger.log('warning', `dump from JSON file failed, not a JSON format, please refer to the documentation`);
+            logger_1.logger.log('warn', `dump from JSON file failed, not a JSON format, please refer to the documentation`);
         if (fileContent.length > 0) {
             logger_1.logger.log('info', `Starting load dump file of ${program.dumpload}...`);
             storeJob(fileContent).on('storeDone', () => {
@@ -204,7 +204,7 @@ function dumpLoadOption() {
             });
         }
         else {
-            logger_1.logger.log('warning', `Empty file detected`);
+            logger_1.logger.log('warn', `Empty file detected`);
             reject();
         }
     });
@@ -400,7 +400,7 @@ function constraintsCall(constraints, connectType) {
     })
         // if an error occured
         .on('errorOnConstraints', (err) => {
-        logger_1.logger.log('warning', `Constraints are empty or not in the right format`);
+        logger_1.logger.log('warn', `Constraints are empty or not in the right format`);
         emitterCall.emit(`${connectType}Failed`, err);
     });
     return emitterCall;
@@ -449,7 +449,7 @@ function globCaches(pathsArray) {
     let mergedIndex;
     // checking that previousCacheDir content is an array
     if (!Array.isArray(pathsArray)) {
-        logger_1.logger.log('warning', 'previousCacheDir variable from config file is not an Array');
+        logger_1.logger.log('warn', 'previousCacheDir variable from config file is not an Array');
         throw 'stop execution';
     }
     //checking if pathsArray contains some empty string. If yes, we do not considerate them.
@@ -483,7 +483,7 @@ function directorySearch(directoryPath) {
         uuidDir = uuidArray.pop(); // retrieving the last element of uuidArray
     }
     else {
-        logger_1.logger.log('warning', `no uuid key found in: ${directoryPath}`);
+        logger_1.logger.log('warn', `no uuid key found in: ${directoryPath}`);
     }
     logger_1.logger.log('debug', `uuid of the directory that contain a jobID.json file ${uuidDir}`);
     return uuidDir;
@@ -497,13 +497,13 @@ function directorySearch(directoryPath) {
 function extractDoc(path, uuid) {
     let file;
     if (typeof (path) !== 'string') {
-        logger_1.logger.log('warning', `path given is not a string type : \n ${path}`);
+        logger_1.logger.log('warn', `path given is not a string type : \n ${path}`);
     }
     try {
         file = jsonfile.readFileSync(path);
     }
     catch (err) {
-        logger_1.logger.log('warning', `while reading the json file ${path} : \n ${err}`);
+        logger_1.logger.log('warn', `while reading the json file ${path} : \n ${err}`);
         return null;
     }
     return file;
@@ -530,13 +530,13 @@ function constraintsToQuery(constraints, either = false) {
     let sel = query.selector;
     if (strConstr === JSON.stringify({}) || strConstr === JSON.stringify([])) {
         let error = 'Empty constraints json or array given';
-        logger_1.logger.log('warning', error);
+        logger_1.logger.log('warn', error);
         constEmitter.emit('errorOnConstraints');
         return constEmitter;
     } // (1)
     if (!constraints) {
         let error = 'Constraints value is evaluated to false, maybe empty object or empty string';
-        logger_1.logger.log('warning', error);
+        logger_1.logger.log('warn', error);
         constEmitter.emit('errorOnConstraints');
         return constEmitter;
     } // (1)
@@ -595,7 +595,7 @@ emitter.on('indexDone', () => {
     logger_1.logger.log('info', 'Indexation succeed properly');
 })
     .on('maxTryReach', (docListFailed) => {
-    logger_1.logger.log('warning', `adding failed for this following list of document: \n ${docListFailed} `);
+    logger_1.logger.log('warn', `adding failed for this following list of document: \n ${docListFailed} `);
 })
     .on('callCurlErr', (err) => {
     logger_1.logger.log('error', `curl command failed: \n ${err}`);

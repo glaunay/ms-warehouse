@@ -66,7 +66,7 @@ function pushConstraints(constraints, param = config) {
         });
     })
         .catch(() => {
-        logger_1.logger.log('warning', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
+        logger_1.logger.log('warn', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
         emitterConstraints.emit('cantConnect');
     });
     return emitterConstraints;

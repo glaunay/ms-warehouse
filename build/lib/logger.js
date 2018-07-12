@@ -21,7 +21,7 @@ exports.logger = logger;
 logger.setLevels({
     critical: 0,
     error: 1,
-    warning: 2,
+    warn: 2,
     success: 3,
     info: 4,
     debug: 5
@@ -29,7 +29,7 @@ logger.setLevels({
 logger.addColors({
     critical: 'red',
     error: 'magenta',
-    warning: 'yellow',
+    warn: 'yellow',
     success: 'green',
     info: 'cyan',
     debug: 'blue'

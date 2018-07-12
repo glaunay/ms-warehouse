@@ -61,7 +61,7 @@ export function pushConstraints (constraints : types.jobSerialConstraints, param
 		})
 	})
 	.catch(() => {
-        logger.log('warning', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
+        logger.log('warn', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
         emitterConstraints.emit('cantConnect');
     })
 

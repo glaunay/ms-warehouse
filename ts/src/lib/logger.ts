@@ -20,7 +20,7 @@ import logger = require('winston');
 logger.setLevels({
     critical:0,
     error:1,
-    warning: 2,
+    warn: 2,
     success:3,
     info:4,
     debug:5
@@ -28,7 +28,7 @@ logger.setLevels({
 logger.addColors({
     critical: 'red',
     error:  'magenta',
-    warning:'yellow',
+    warn:'yellow',
     success: 'green',
     info:  'cyan',
     debug: 'blue'
@@ -38,7 +38,7 @@ logger.remove(logger.transports.Console);
 logger.add(logger.transports.Console, { level: 'info', colorize:true });
 //logger.add(logger.transports.File, { filename: "./logs/devel.log" });
 
-type logLvl = 'debug'|'info'|'success'|'warning'|'error'|'critical';
+type logLvl = 'debug'|'info'|'success'|'warn'|'error'|'critical';
 function isLogLvl (value:string) : value is logLvl {
     return value === 'debug' || value === 'info' || value === 'success' || value === 'warning'
     || value === 'error' || value === 'critical';
