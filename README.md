@@ -82,7 +82,16 @@ git clone https://github.com/melaniegarnier/ms-warehouse
     - Linux (Ubuntu) : `sudo apt-get install nodejs npm`
     - MacOS : `brew install node`
 
-3) Install the NoSQL database CouchDB
+
+3-a) Install The NoSQL database CouchDB with website
+
+```bash
+echo "deb https://apache.bintray.com/couchdb-deb xenial main"  | sudo tee -a /etc/apt/sources.list
+curl -L https://couchdb.apache.org/repo/bintray-pubkey.asc     | sudo apt-key add -
+sudo apt-get update && sudo apt-get install couchdb
+```
+
+3-b) Install the NoSQL database CouchDB with website
 
 - Download it directly from the [CouchDB](http://couchdb.apache.org) website
 - Using packet manager on Unix-like systems (with couchDB documentation): [Unix-Like Systems](http://docs.couchdb.org/en/2.0.0/install/unix.html)
@@ -139,7 +148,7 @@ Options:
     -h, --help                  output usage information
 ```
 
-The `./config.json` file is required by the program to work properly. This file contains different kind of properties (default values are this ones):
+The `./data/config-server.json` file is required by the program to work properly. If one of this key are missing or incorrectly given, the program will stop his exectuion. This file contains different kind of properties (default values are this ones):
 
 ```json
 // previousCacheDir is a list that contain every cache path waiting for indexation (with -i command option)
@@ -167,11 +176,17 @@ All of those properties are required by the program, but also the `-c <path>` co
 - Program running:
 
 ```javascript
-// start the warehouse server
-node index.js -c config.json
+//Place yourself into the build program (generate by typescript compilation)
+cd build/
+// start the warehouse server 
+node index.js -c ../data/config-server.json
 
-// start the warehouse server with indexation of repository (specified in the config.json file)
-node index.js -c config.json -i
+// Access all the command of the program:
+node index.js -c ../data/config-server.json -h
+
+// start the warehouse server with indexation of repository (specified in the ../data/config-server.json file)
+node index.js -c ../data/config.json-server -i
+
 ```
 
 ## Running the tests
@@ -179,26 +194,35 @@ node index.js -c config.json -i
 If you want to run some tests, you can use the ```-t``` command line option:
 
 ```javascript
-node index -c config.json -t
+node index -c ../data/config-server.json -t
 ```
-This command will call the ```./test/tests-warehouse.js``` that will runs a set of tests before starting the warehouse micro-service.
+This command will call the ```./test/tests-warehouse.js``` file that will run a set of tests before starting the warehouse micro-service.
 Tests list (by simply using -t command line option):
 
 - 1) Load dump file ---> This test will load an artificial dump file of a previous warehouse. The ```./test/data.json``` file will be loaded into the warehouse database. This file contain only 2 jobID.json files.
 
 - 2) Indexation ---> This test will the indexation feature from the warehouse API. It consist of extract some jobs of some cache directory. The program searched on 3 directory located in ```./test/cache_Dir_1```, ```./test/cache_Dir_2``` and  ```./test/cache_Dir_3```. 8 job files can be found in those directory. After this task, the program will store them into the warehouse database.
 
-- 3) Check constraints ---> This test will introduce another feature of the warehouse calling the research by constraints. Constraints is that will describe a specific job. The program will try to find a job (couchDB document) corresponding to this constraint: ```{"script":"/My/Path/To/My/Script/script.sh"}```.
+- 3) Check constraints ---> This test will introduce another feature of the warehouse calling the research by constraints. Constraints is that will describe a specific job. The program will try to find a job (couchDB document) corresponding to this constraint: 
+```javascript
+{
+    "script":"/My/Path/To/My/Script/script.sh",    
+    "inputHash":{   
+        "file1.inp":"42386c2d-fd44-459c-a94f-d4af29485b4f",    
+        "file2.inp":"9e63443d-fc8f-49aa-9dc6-a7f8b15f0ceb"   
+    }
+}
+```
 This test will return an error, actually there is not job matching this specific constraint stored inside the database. This result is expected.
 
-- 4) Adding job ---> This test will add a job with a ```"script"``` key with the value of the previous constraint ```{"script":"/My/Path/To/My/Script/script.sh"}```. The database return a success message when the job is fully well inserted.
+- 4) Adding job ---> This test will add a job with a ```"script"``` and ```"inputHash"``` keys with the value of the previous constraint. The database return a success message when the job is fully well inserted.
 
-- 5) Check constraints 2 ---> We try again to check if the job possessing the ```{"script":"/My/Path/To/My/Script/script.sh"}``` constraint is now present in the database. The database will return ```ok```.
+- 5) Check constraints 2 ---> We try again to check if the job possessing the exactly same constraints (as step 3). A job footprint is now present in the database. The database will return ```ok```.
 
 - 6) Database dump ---> This test will dump the database content in a json file (the name of the file is the database name given in the config.json file, for example ```warehouse.json```).
 
 If all tests succeed, the program will remove the 11 job documents added by the tests.
-Finally, the program will start running the micro-service on the two port specified in the ```./config.json``` file for the Socket and HTTP connections.
+Finally, the program will start running the micro-service on the two port specified in the ```../data/config-server.json``` file for the Socket and HTTP connections.
 
 ### Socket and Express tests when MS-Warehouse running
 
@@ -274,9 +298,35 @@ node test/test-express.js
 
 ## API of MS-Warehouse
 
-This part will describe the API of the micro-service Warehouse. This API give the two main features of the Warehouse, the job trace check and the storage of job trace
+This part will describe the API of the micro-service Warehouse. This API give the two main features of the Warehouse, the job trace check and the storage of job trace.
 
-## Deployment local / server
+```javascript
+// Push Constraints Warehouse function
+"http://address:port/pushConstraints"
+
+//Store Job Warehouse function
+"http://address:port/storeJob"
+```
+
+If you want to execute the express test, use the following command:
+
+```bash
+cd build/
+node test/test-express.js
+```
+
+## Port forwarding, remote server
+
+If you want to access to database with remote server use this command:
+
+```bash
+ssh login@arwen.ibcp.fr -L 1234:193.51.160.146:5984
+
+#access to Fauxton distant:
+"http://localhost:1234/_utils/"
+```
+
+## Deployment local / server (In progress)
 
 |:arrow\_down: Local \ Server :arrow\_right:| Pipeline | Job-Manager | Warehouse|
 | --- | --- | --- | --- |
