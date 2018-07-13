@@ -13,7 +13,7 @@ const EventEmitter = require("events");
 const child_process_1 = require("child_process");
 const index = __importStar(require("../index"));
 const logger_1 = require("../lib/logger");
-let dataToIndex = ["./test/cache_Dir_1", "./test/cache_Dir_2", "./test/cache_Dir_3"];
+let dataToIndex = ["../data/cache_Dir_1", "../data/cache_Dir_2", "../data/cache_Dir_3"];
 // Imitate a job content that will be insert in database
 let dataToAdd = {
     "workDir": "/My/Path/To/Work/Directory",

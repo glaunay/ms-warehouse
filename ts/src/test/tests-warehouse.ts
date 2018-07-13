@@ -9,7 +9,7 @@ import * as types from '../types/index';
 import { logger, setLogLevel } from '../lib/logger';
 
 
-let dataToIndex : string[] = ["./test/cache_Dir_1", "./test/cache_Dir_2", "./test/cache_Dir_3"];
+let dataToIndex : string[] = ["../data/cache_Dir_1", "../data/cache_Dir_2", "../data/cache_Dir_3"];
 
 // Imitate a job content that will be insert in database
 let dataToAdd : types.jobSerialInterface = {

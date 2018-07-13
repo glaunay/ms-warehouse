@@ -206,11 +206,11 @@ Tests list (by simply using -t command line option):
 - 3) Check constraints ---> This test will introduce another feature of the warehouse calling the research by constraints. Constraints is that will describe a specific job. The program will try to find a job (couchDB document) corresponding to this constraint: 
 ```javascript
 {
-	"script":"/My/Path/To/My/Script/script.sh",    
-	"inputHash":{   
-		"file1.inp":"42386c2d-fd44-459c-a94f-d4af29485b4f",    
-		"file2.inp":"9e63443d-fc8f-49aa-9dc6-a7f8b15f0ceb"   
-	}
+    "script":"/My/Path/To/My/Script/script.sh",    
+    "inputHash":{   
+        "file1.inp":"42386c2d-fd44-459c-a94f-d4af29485b4f",    
+        "file2.inp":"9e63443d-fc8f-49aa-9dc6-a7f8b15f0ceb"   
+    }
 }
 ```
 This test will return an error, actually there is not job matching this specific constraint stored inside the database. This result is expected.
