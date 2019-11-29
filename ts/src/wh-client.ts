@@ -43,11 +43,11 @@ export function pushConstraints (constraints : types.jobSerialConstraints, param
 		})
 		.on('resultsConstraints', (messageResults: types.msg) => {
 			if (messageResults.value === 'found') {
-				logger.log('info', `Job trace found in Warehouse`);
-				logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
+				logger.info(`Job trace found in Warehouse`);
+				logger.debug(`Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
 				let workPath = messageResults.data[0].workDir;
 				fStdout_fSterr_Check(workPath).on('checkOK', (nameOut: string, nameErr: string) => {
-					logger.log('success', `Found ${messageResults.data.length} jobs traces`)
+					logger.info(`Found ${messageResults.data.length} jobs traces`)
 					emitterConstraints.emit('foundDocs', nameOut, nameErr, workPath);
 				})
 				.on('checkNotOK', () => {
@@ -56,8 +56,8 @@ export function pushConstraints (constraints : types.jobSerialConstraints, param
 			};
 
 			if (messageResults.value === 'notFound') {
-				logger.log('info', `Job trace not found in Warehouse`);
-				logger.log('debug', `Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
+				logger.info(`Job trace not found in Warehouse`);
+				logger.debug(`Message receive from server (check constraints) \n ${JSON.stringify(messageResults)}`);
 				emitterConstraints.emit('notFoundDocs', messageResults);
 			}
 			if (messageResults.value === 'errorConstraints') emitterConstraints.emit('errorDocs', messageResults);
@@ -82,9 +82,9 @@ export function storeJob (jobCompleted : any) : EventEmitter {
 		socketStoreJob.emit('storeJob', msg);
 	})
 	.on('addingResponse', (messageRes: types.msg) => {
-		logger.log('info', `Job footprint stored in Warehouse`)
+		logger.info(`Job footprint stored in Warehouse`)
 		//logger.log('info', `Message receive from server (add job request) \n ${JSON.stringify(messageRes)}`);
-		logger.log('debug', `Message returned: \n ${JSON.stringify(messageRes)}`);
+		logger.debug(`Message returned: \n ${JSON.stringify(messageRes)}`);
 		
 		if (messageRes.value === 'success') emitterStore.emit('addSuccess', messageRes);
 		if (messageRes.value === 'errorAddjob') emitterStore.emit('addError', messageRes);
@@ -121,7 +121,7 @@ function messageBuilder (data : types.jobSerialConstraints | types.jobSerialInte
 				'value' : event,
 				'data' : data
 	}
-	logger.log('debug',`Message value before sending: \n ${JSON.stringify(message)}`)
+	logger.debug(`Message value before sending: \n ${JSON.stringify(message)}`)
 	return message;
 
 }
@@ -169,23 +169,23 @@ export function handshake (param: types.clientConfig): Promise<any> {
 	return new Promise ((resolve, reject) => {
 
 		if (types.isClientConfig(param)){
-			logger.log('info', `Client config paramaters perfectly loaded`);
-			logger.log('debug', `Config file content: \n ${JSON.stringify(param)}`)
+			logger.debug(`Client config paramaters perfectly loaded`);
+			logger.debug(`Config file content: \n ${JSON.stringify(param)}`)
 			
 			let socket = io.connect(`http://${param.warehouseAddress}:${param.portSocket}`);
 			
 			socket.on('connect', function() {
-				logger.log('info', `Connection with Warehouse server succeed, starting communication...\n`);
+				logger.info(`Connection with Warehouse server succeed, starting communication...\n`);
 				resolve();
 			})
 			.on('connect_error', function() {
-				logger.log('warn', `Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
+				logger.warn(`Connection with Warehouse server cannot be establish, disconnecting socket...\n`);
 				reject();
 				socket.disconnect() 
 			})
 		}
 		else {
-			logger.log('error', `Config file not in good format \n ${JSON.stringify(config)}`);
+			logger.error(`Config file not in good format \n ${JSON.stringify(config)}`);
 			reject();
 	}
 	})
