@@ -11,7 +11,11 @@ import io = require('socket.io-client');
 import path = require('path');
 // Required modules
 import * as types from './types/index';
-import { logger, setLogLevel } from './lib/logger';
+
+let logger = require('winston');
+export function setLogger(_logger:any) {
+	logger = _logger;
+};
 
 let emetTest: EventEmitter = new EventEmitter();
 

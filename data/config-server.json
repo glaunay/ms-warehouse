@@ -1,6 +1,6 @@
 {
 	"previousCacheDir" : ["../data/cache_Dir_1", "../data/cache_Dir_2", "../data/cache_Dir_3"],
-	"accountDBName": "vreymond",
+	"accountDBName": "wh_agent",
 	"password": "couch",
 	"databaseName" : "warehouse",
 	"databaseAddress": "localhost",

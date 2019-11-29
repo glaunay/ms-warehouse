@@ -14,29 +14,38 @@
 * - win.logger.log('INFO', <text>)          - 5th level of logger, info message
 * - win.logger.log('DEBUG', <text>)         - Lower level of logger, debug mode
 */
+const ws = require('winston');
 
-import logger = require('winston');
-
-logger.setLevels({
-    critical:0,
-    error:1,
-    warn: 2,
-    success:3,
-    info:4,
-    debug:5
+const myCustomLevels = {
+    levels: {
+        fatal:0,
+        error:1,
+        warn: 2,
+        success:3,
+        info:4,
+        debug:5
+        },
+    colors: {
+        fatal: 'red',
+        error:  'magenta',
+        warn:'yellow',
+        success: 'green',
+        info:  'cyan',
+        debug: 'blue'
+    }
+  };
+// See winston format API at https://github.com/winstonjs/logform
+const cLogger = ws.createLogger({
+  format: ws.format.combine(
+    ws.format.colorize(),
+    ws.format.timestamp(),
+    ws.format.printf((info:any) => `[${info.timestamp}] ${info.level}: ${info.message}`)
+  ),
+  levels: myCustomLevels.levels,
+  transports: [new ws.transports.Console()]
 });
-logger.addColors({
-    critical: 'red',
-    error:  'magenta',
-    warn:'yellow',
-    success: 'green',
-    info:  'cyan',
-    debug: 'blue'
-});
 
-logger.remove(logger.transports.Console);
-logger.add(logger.transports.Console, { level: 'info', colorize:true });
-//logger.add(logger.transports.File, { filename: "./logs/devel.log" });
+ws.addColors(myCustomLevels.colors);
 
 type logLvl = 'debug'|'info'|'success'|'warn'|'error'|'critical';
 function isLogLvl (value:string) : value is logLvl {
@@ -45,7 +54,7 @@ function isLogLvl (value:string) : value is logLvl {
 }
 export function setLogLevel (value : string) : void {
     if (!isLogLvl(value)) throw `Unrecognized logLvel "${value}"`;
-    logger.level = value;
+    cLogger.level = value;
 }
 
-export {logger};
+export {cLogger as logger};

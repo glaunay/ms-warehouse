@@ -8,6 +8,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const program = require("commander");
 const client = require("../wh-client");
 const logger_1 = require("../lib/logger");
+client.setLogger(logger_1.logger);
 program
     .option("-a, --address <address>", "Warehouse address")
     .option("-p, --port <port>", "Warehouse socket port")

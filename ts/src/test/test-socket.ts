@@ -8,6 +8,7 @@ import program = require ("commander");
 import client = require('../wh-client');
 import * as types from '../types/index';
 import { logger, setLogLevel } from '../lib/logger';
+client.setLogger(logger);
 
 program
   .option("-a, --address <address>", "Warehouse address")

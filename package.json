@@ -19,7 +19,7 @@
     "@types/node": "^9.4.6",
     "@types/socket.io": "^1.4.31",
     "@types/socket.io-client": "^1.4.32",
-    "@types/winston": "^2.3.8",
+    "@types/winston": "^3.2.0",
     "typescript": "^2.7.2"
   },
   "dependencies": {
@@ -28,13 +28,13 @@
     "glob": "^7.1.2",
     "jsonfile": "^4.0.0",
     "md5": "^2.2.1",
-    "nano": "^6.4.4",
+    "nano": "^8.1.0",
     "path-exists": "^3.0.0",
     "socket.io": "^2.0.4",
     "socket.io-client": "^2.0.4",
     "split-array": "^1.0.1",
     "uuid": "^3.2.1",
-    "winston": "^2.4.0"
+    "winston": "^3.2.1"
   },
   "directories": {
     "lib": "lib",

@@ -11,7 +11,7 @@ import EventEmitter = require ("events");
 import fs = require ("fs");
 import glob = require ("glob");
 import jsonfile = require ("jsonfile");
-import nanoDB = require ("nano");
+//import nanoDB = require ("nano");
 
 // Required modules
 import * as dbMod from "./lib/db-module";
@@ -19,6 +19,7 @@ import { logger, setLogLevel } from "./lib/logger";
 import tests = require ("./test/tests-warehouse");
 import * as types from "./types/index";
 import server = require ("./wh-server");
+import nano = require("nano");
 
 /*
 * Variable initialisation.
@@ -84,8 +85,8 @@ if (program.config && program.config !== "") { // (1)
 }
 
 else {
-	logger.log('warn','No config file specified');
-	throw 'stop execution';
+	logger.fatal('No config file specified');
+	process.exit(1);
 }
 
 if (program.index) { // (3)
@@ -121,9 +122,9 @@ else {
 
 }
 
-let url: string = `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}`;
+const url: string = `http://${accountDB}:${passwordDB}@${addressDB}:${portDB}`;
 logger.log('info',`Connection to "${url}"`)
-let nano = nanoDB(url)
+const nanoDB = nano(url)
 
 /*
 * function warehouseTests that run the warehouse tests.
@@ -146,26 +147,21 @@ function warehouseTests () : void {
 * this database will be destroy before creating the new one (with the same name).
 */
 function dropDB () : void {
-	nano.db.destroy(nameDB, function(err: any) {
+	nanoDB.db.destroy(nameDB, function(err: any) {
  		if (err && err.statusCode != 404) {
  			logger.log('error',`When destroying ${nameDB} database : \n`)
  			throw err;
  		}
-
- 		nano.db.create(nameDB, function(err: any) {
- 			if (err) {
- 				logger.log('error',`During creation of the database '${nameDB}' : \n`)
- 				throw err;
- 			}
+ 		nanoDB.db.create(nameDB).then( (body:nano.DatabaseCreateResponse) => {
  			logger.log('success', `Database ${nameDB} created \n`)
- 			if (program.test) {
- 				// calling tests from ./test/tests.warehouse.js
- 				warehouseTests ();
- 			}	
- 			else {
- 				emitter.emit('created');
- 			}	
- 		})
+ 			if (program.test) // calling tests from ./test/tests.warehouse.js
+				 warehouseTests ();
+			emitter.emit('created');
+		 }).catch((reason:any)=>{
+				logger.log('error',`During creation of the database '${nameDB}' : \n`)
+				throw reason;
+		});
+ 				
 	})
 }
 
@@ -265,7 +261,7 @@ emitter.on('created', () => {
 	// Sarting runOptions function, waiting for the Promise result.
 	// If resolved, starting warehouse server.
 	runOptions().then(() => {
-		
+		logger.info("WH microService is listening");
 		//starting express server
 		server.startServerExpress(portExpress);
 		//starting socket server + listeners
